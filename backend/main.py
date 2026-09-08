@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
+from backend.football import get_matches
 
 app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
 
@@ -55,7 +56,7 @@ def root():
 # db: Session = Depends(get_db) — FastAPI automatically injects the database session
 # db.query(Match).all() — SQLAlchemy runs SELECT * FROM matches
 @app.get("/matches", response_model=list[MatchResponse])
-def get_matches(db: Session = Depends(get_db)):
+def get_all_matches(db: Session = Depends(get_db)):
     matches = db.query(Match).all()                         # SELECT * FROM matches
     return matches                                          # FastAPI formats through MatchResponse and converts to JSON
 
@@ -87,3 +88,9 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
     db.refresh(new_match)                                  # reload from PostgreSQL to get auto-assigned id and created_at
     return new_match                                       # FastAPI formats through MatchResponse and sends to React as JSON
 
+
+
+@app.get("/football/matches")
+async def football_matches(competition: str = "PL"):
+    data = await get_matches(competition)
+    return data
