@@ -35,7 +35,7 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
-from backend.football import get_matches, get_standings      # imports football API functions
+from backend.football import get_matches, get_standings, get_topscorers      # imports football API functions
 
 app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
 
@@ -121,3 +121,18 @@ async def football_matches(competition: str = "PL"):
 async def football_standings(competition: str = "PL"):
     data = await get_standings(competition)                # calls football.py which calls football-data.org
     return data                                            # real live standings sent back to React as JSON
+
+
+# GET /football/scorers — fetches REAL live top scorers from football-data.org
+# same pattern as football_matches and football_standings — only calls get_topscorers()
+# returns player name, team, goals scored, assists for top scorers in the league
+# defaults to top 10 — football-data.org limits to 10 on the free tier
+# React can pass ?competition=BL1 for Bundesliga scorers, ?competition=SA for Serie A etc.
+@app.get("/football/scorers")
+async def football_topscorers(competition: str = "PL"):
+    data = await get_topscorers(competition)               # calls football.py which calls football-data.org
+    return data                                            # real live top scorers sent back to React as JSON
+@app.get("/football/scorers")
+async def football_topscorers(competition: str = "PL"):
+    data = await get_topscorers(competition)
+    return data

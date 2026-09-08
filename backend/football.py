@@ -2,7 +2,12 @@
 football.py — handles all communication with the football-data.org API.
 FastAPI acts as the middleman: React asks FastAPI, FastAPI asks football-data.org,
 football-data.org sends back real soccer data, FastAPI returns it to React.
+
+Why go through FastAPI instead of React calling the football API directly?
+1. Security — API key stays on the server, never exposed in the browser
+2. Control — we can transform, filter, and cache data before sending to React
 '''
+
 import httpx                              # makes HTTP requests from Python — like axios but for backend
 import os                                 # reads environment variables
 from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
@@ -36,5 +41,14 @@ async def get_standings(competition="PL"):
         return response.json()                                # converts response to Python dict and returns it
 
 
+# get_topscorers() — calls football-data.org and returns top scorers for a competition
+# same structure as get_matches() and get_standings() — only the URL path changes
+# returns player name, team, goals scored, assists for the top scorers in the league
+# defaults to top 10 scorers — football-data.org limits to 10 on the free tier
+async def get_topscorers(competition="PL"):
+    url = f"{BASE_URL}/competitions/{competition}/scorers"  # scorers endpoint — same base URL, different path
+    headers = {"X-Auth-Token": API_KEY}                     # API key in headers — same for every request
 
-
+    async with httpx.AsyncClient() as client:               # async HTTP client — auto-closes when done
+        response = await client.get(url, headers=headers)   # sends GET request, awaits response
+        return response.json()                              # converts response to Python dict and returns it
