@@ -52,3 +52,40 @@ async def get_topscorers(competition="PL"):
     async with httpx.AsyncClient() as client:               # async HTTP client — auto-closes when done
         response = await client.get(url, headers=headers)   # sends GET request, awaits response
         return response.json()                              # converts response to Python dict and returns it
+
+
+# get_livematches() — calls football-data.org and returns all matches currently live
+# no competition parameter — returns live matches across ALL competitions
+# uses params dict to pass ?status=LIVE as a query filter — cleaner than putting it in the URL
+async def get_livematches():
+    url = f"{BASE_URL}/matches"                             # general matches endpoint — not competition specific
+    headers = {"X-Auth-Token": API_KEY}
+    params = {"status": "LIVE"}                             # filter for only live matches — httpx builds ?status=LIVE automatically
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers, params=params)  # params dict added to request
+        return response.json()
+
+
+# get_match_detail() — calls football-data.org and returns full details for one specific match
+# takes match_id as parameter — use the id field from any match object
+# returns score, teams, referee, competition, and match timeline
+async def get_match_detail(match_id: int):
+    url = f"{BASE_URL}/matches/{match_id}"                  # specific match endpoint — id in the URL path
+    headers = {"X-Auth-Token": API_KEY}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+        return response.json()
+
+
+# get_team() — calls football-data.org and returns full info for one specific team
+# takes team_id as parameter — use the id field from any team object
+# returns squad, coach, stadium, colors, competitions the team is in
+async def get_team(team_id: int):
+    url = f"{BASE_URL}/teams/{team_id}"                     # specific team endpoint — id in the URL path
+    headers = {"X-Auth-Token": API_KEY}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+        return response.json()

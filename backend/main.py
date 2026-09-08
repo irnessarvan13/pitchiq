@@ -35,7 +35,7 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
-from backend.football import get_matches, get_standings, get_topscorers      # imports football API functions
+from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team      # imports football API functions
 
 app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
 
@@ -136,3 +136,31 @@ async def football_topscorers(competition: str = "PL"):
 async def football_topscorers(competition: str = "PL"):
     data = await get_topscorers(competition)
     return data
+
+
+
+# GET /football/live — fetches ALL matches currently live across all competitions
+# no competition filter — shows every live match happening right now
+# async because it awaits an external API call
+@app.get("/football/live")
+async def football_livematches():
+    data = await get_livematches()                          # calls football.py which calls football-data.org
+    return data                                             # real live matches sent back to React as JSON
+
+
+# GET /football/matches/{match_id} — fetches full details for one specific match
+# match_id is a path parameter — FastAPI extracts it from the URL automatically
+# use the id field from any match object to get its full details
+@app.get("/football/matches/{match_id}")
+async def football_matchdetail(match_id: int):
+    data = await get_match_detail(match_id)                 # calls football.py with the match id
+    return data                                             # full match details sent back to React as JSON
+
+
+# GET /football/teams/{team_id} — fetches full info for one specific team
+# team_id is a path parameter — FastAPI extracts it from the URL automatically
+# use the id field from any team object to get its full squad and info
+@app.get("/football/teams/{team_id}")
+async def football_team(team_id: int):
+    data = await get_team(team_id)                          # calls football.py with the team id
+    return data                                             # full team info sent back to React as JSON
