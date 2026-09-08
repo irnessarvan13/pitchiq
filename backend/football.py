@@ -1,21 +1,24 @@
-import httpx
-import os
-from dotenv import load_dotenv
+'''
+football.py — handles all communication with the football-data.org API.
+FastAPI acts as the middleman: React asks FastAPI, FastAPI asks football-data.org,
+football-data.org sends back real soccer data, FastAPI returns it to React.
+'''
+import httpx                              # makes HTTP requests from Python — like axios but for backend
+import os                                 # reads environment variables
+from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
 
+load_dotenv()                             # actually reads the .env file — must be called before os.getenv()
 
-load_dotenv()
-API_KEY = os.getenv("FOOTBALL_API_KEY")
-BASE_URL = "https://api.football-data.org/v4" #Stores the base URL of the football-data.org
+API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key
+BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
 
+# get_matches() — calls football-data.org and returns match data for a competition
+# async because network requests take time — await lets other requests run while waiting
+# competition="PL" is a default parameter — PL = Premier League. Pass "BL1" for Bundesliga etc.
+async def get_matches(competition="PL"):
+    url = f"{BASE_URL}/competitions/{competition}/matches"  # f-string builds the full URL dynamically
+    headers = {"X-Auth-Token": API_KEY}                     # API key goes in headers — X-Auth-Token is what football-data.org expects
 
-#An async function that calls football-data.org and returns match data for a specific competition.
-async def get_matches(competition="PL"):        #competition="PL" is a default parameter.
-    url = f"{BASE_URL}/competitions/{competition}/matches"  #builds the full URL. 
-    headers = {"X-Auth-Token": API_KEY}   #football-data.org requires your API key in the request headers.
-                                          #X-Auth-Token is the specific header name they use.
-    
-    async with httpx.AsyncClient() as client:   #creates an async HTTP client.
-        response = await client.get(url, headers=headers)   #sends the GET request to football-data.org and waits for the response
-        return response.json()                  #converts the response from football-data.org into a Python dictionary
-
-
+    async with httpx.AsyncClient() as client:   # async HTTP client — auto-closes when done, no memory leaks
+        response = await client.get(url, headers=headers)   # sends GET request, awaits response from football-data.org
+        return response.json()                              # converts response to Python dict and returns it
