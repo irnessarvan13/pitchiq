@@ -24,8 +24,9 @@ Two separate steps. One defines it, one builds it.
 app = FastAPI() creates the single FastAPI application instance.
 Everything in the backend attaches to this — middleware, endpoints, startup events. There is only ever one of these.
 
-from backend.football import get_matches — imports the function that calls football-data.org.
-FastAPI acts as the middleman: React asks FastAPI, FastAPI asks football-data.org, data comes back to React.
+from backend.football import get_matches, get_standings — imports functions that call football-data.org.
+FastAPI acts as the middleman: React → FastAPI → football-data.org → FastAPI → React.
+API key stays on the server — never exposed to the browser.
 '''
 
 from fastapi import FastAPI, Depends, HTTPException          # FastAPI = app | Depends = inject db session | HTTPException = throw errors
@@ -34,7 +35,7 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
-from backend.football import get_matches                     # imports get_matches from football.py to call football-data.org API
+from backend.football import get_matches, get_standings      # imports football API functions
 
 app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
 
@@ -105,7 +106,18 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
 # competition is a query parameter with default "PL" (Premier League)
 # React can pass ?competition=BL1 for Bundesliga, ?competition=SA for Serie A etc.
 # FastAPI acts as middleman: React → FastAPI → football-data.org → FastAPI → React
+# API key stays on the server — never exposed to the browser
 @app.get("/football/matches")
 async def football_matches(competition: str = "PL"):
     data = await get_matches(competition)                  # calls football.py which calls football-data.org
     return data                                            # real live soccer data sent back to React as JSON
+
+
+# GET /football/standings — fetches REAL live league standings from football-data.org
+# same pattern as football_matches — only calls get_standings() instead
+# returns position, points, wins, losses, goal difference for every team
+# React can pass ?competition=BL1 for Bundesliga standings, ?competition=SA for Serie A etc.
+@app.get("/football/standings")
+async def football_standings(competition: str = "PL"):
+    data = await get_standings(competition)                # calls football.py which calls football-data.org
+    return data                                            # real live standings sent back to React as JSON

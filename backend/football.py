@@ -9,7 +9,7 @@ from dotenv import load_dotenv            # reads .env file so os.getenv() can f
 
 load_dotenv()                             # actually reads the .env file — must be called before os.getenv()
 
-API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key
+API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key from .env — keeps it off GitHub and out of code
 BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
 
 # get_matches() — calls football-data.org and returns match data for a competition
@@ -19,6 +19,22 @@ async def get_matches(competition="PL"):
     url = f"{BASE_URL}/competitions/{competition}/matches"  # f-string builds the full URL dynamically
     headers = {"X-Auth-Token": API_KEY}                     # API key goes in headers — X-Auth-Token is what football-data.org expects
 
-    async with httpx.AsyncClient() as client:   # async HTTP client — auto-closes when done, no memory leaks
+    async with httpx.AsyncClient() as client:               # async HTTP client — auto-closes when done, no memory leaks
         response = await client.get(url, headers=headers)   # sends GET request, awaits response from football-data.org
         return response.json()                              # converts response to Python dict and returns it
+
+
+# get_standings() — calls football-data.org and returns league standings for a competition
+# same structure as get_matches() — only the URL path changes
+# standings show position, points, wins, losses, goal difference for every team
+async def get_standings(competition="PL"):
+    url = f"{BASE_URL}/competitions/{competition}/standings"  # standings endpoint — same base URL, different path
+    headers = {"X-Auth-Token": API_KEY}                       # API key in headers — same for every request
+
+    async with httpx.AsyncClient() as client:                 # async HTTP client — auto-closes when done
+        response = await client.get(url, headers=headers)     # sends GET request, awaits response
+        return response.json()                                # converts response to Python dict and returns it
+
+
+
+
