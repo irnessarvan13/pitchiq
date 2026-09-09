@@ -1,184 +1,222 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
+/* main dashboard container — centers content and adds padding */
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* dashboard title */
+.dashboard-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
   margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+  letter-spacing: -0.5px;
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+/* card style — each section lives in a card */
+.card {
+  background-color: #242840;   /* slightly lighter than background */
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #2d3250;
 }
 
-#center {
+/* section title inside each card */
+.card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #2d3250;
+}
+
+/* live indicator dot */
+.live-badge {
+  display: inline-block;
+  background-color: #22c55e;   /* green — same as FotMob live indicator */
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* match card for live matches */
+.match-card {
   display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #2d3250;
 }
 
-#next-steps {
+.match-card:last-child {
+  border-bottom: none;         /* no border on last match */
+}
+
+/* team row inside match card */
+.team-row {
   display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+  align-items: center;
+  gap: 8px;                    /* space between badge and name */
+  width: 35%;
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+.team-row.away {
+  justify-content: flex-end;   /* away team aligned to the right */
 }
 
-#next-steps ul {
-  list-style: none;
-  padding: 0;
+/* score display */
+.score {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  width: 80px;
+}
+
+/* competition name */
+.competition-name {
+  font-size: 11px;
+  color: #8b95a5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+/* standings table team cell */
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* highlight top 4 positions in green */
+.position-top4 {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+/* highlight relegation zone in red */
+.position-relegation {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* no data message */
+.no-data {
+  color: #8b95a5;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* loading message */
+.loading {
+  color: #8b95a5;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+
+/* navbar */
+.navbar {
+  background-color: #1a1d2e;
+  border-bottom: 1px solid #2d3250;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;             /* stays at top when scrolling */
+  top: 0;
+  z-index: 100;
+  margin-bottom: 0;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-logo {
+  font-size: 20px;
+}
+
+.navbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 24px;
+}
+
+.navbar-link {
+  color: #8b95a5;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.navbar-link:hover {
+  color: #ffffff;
+}
+
+/* hover effect on table rows */
+tbody tr:hover {
+  background-color: #2d3250;   /* slightly lighter on hover */
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+
+
+/* competition selector */
+.competition-selector {
   display: flex;
   gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
+.comp-btn {
+  background-color: #242840;
+  color: #8b95a5;
+  border: 1px solid #2d3250;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.ticks {
-  position: relative;
-  width: 100%;
+.comp-btn:hover {
+  color: #ffffff;
+  border-color: #4a5080;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
+.comp-btn.active {
+  background-color: #22c55e;   /* green when selected */
+  color: #ffffff;
+  border-color: #22c55e;
+}
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
+/* active navbar link — green when that section is visible */
+.navbar-link-active {
+  color: #22c55e !important;
+  font-weight: 600;
 }

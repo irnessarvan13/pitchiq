@@ -78,12 +78,16 @@ export async function getLiveMatches(): Promise<LiveMatch[]> {
   return response.data.matches           // football-data.org wraps matches inside a matches key — extract just the array
 }
 
-// get Premier League standings — defaults to PL, pass 'BL1' for Bundesliga etc.
-export async function getStandings(competition: string = 'PL'): Promise<StandingEntry[]> {
+// get standings — returns table, current matchday, and competition name
+export async function getStandings(competition: string = 'PL') {
   const response = await axios.get(`${API_BASE}/football/standings`, {
-    params: { competition }              // axios adds ?competition=PL to the URL automatically
+    params: { competition }
   })
-  return response.data.standings[0].table  // standings nested deep — [0] = first group, .table = the array
+  return {
+    table: response.data.standings[0].table,         // standings array
+    matchday: response.data.season.currentMatchday,   // current matchday number
+    competition: response.data.competition.name       // competition name e.g. Premier League
+  }
 }
 
 // get top scorers — defaults to PL, pass 'BL1' for Bundesliga etc.

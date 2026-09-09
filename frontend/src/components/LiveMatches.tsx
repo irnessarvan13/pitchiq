@@ -39,36 +39,43 @@ function LiveMatches() {
   }, [])                                              // empty array = run once on mount only
 
   // early return — show loading message while API call is in progress
-  if (loading) return <div>Loading live matches...</div>
+  if (loading) return (
+    <div className="card">
+      <h2>Live Matches</h2>
+      <p className="loading">Loading live matches...</p>
+    </div>
+  )
 
-  // early return — no matches are live right now
-  if (matches.length === 0) return <div>No matches live right now.</div>
+  if (matches.length === 0) return (
+    <div className="card">
+      <h2>Live Matches</h2>
+      <p className="no-data">No matches live right now.</p>
+    </div>
+  )
+
+    if (matches.length === 0) return (
+    <div className="card">
+      <h2>Live Matches</h2>
+      <p className="no-data">No matches live right now.</p>
+    </div>
+  )
 
   return (
-    <div>
-      <h2>Live Matches</h2>
+    <div className="card">
+      <h2>Live Matches <span className="live-badge">Live</span></h2>
       {matches.map(match => (
-        // key must be unique — React uses it to efficiently update the UI
-        <div key={match.id}>
-
-          {/* competition name — e.g. Premier League, Championship */}
-          <p>{match.competition.name}</p>
-
-          {/* home team badge and name */}
-          <img src={match.homeTeam.crest} alt={match.homeTeam.name} width={20} />
-          <span>{match.homeTeam.name}</span>
-
-          {/* score — ?? means if null use 0 instead — null before match starts */}
-          <span>
+        <div key={match.id} className="match-card">
+          <div className="team-row">
+            <img src={match.homeTeam.crest} alt={match.homeTeam.name} width={24} />
+            <span>{match.homeTeam.name}</span>
+          </div>
+          <div className="score">
             {match.score.fullTime.home ?? 0} - {match.score.fullTime.away ?? 0}
-          </span>
-
-          {/* away team badge and name */}
-          <img src={match.awayTeam.crest} alt={match.awayTeam.name} width={20} />
-          <span>{match.awayTeam.name}</span>
-
-          {/* match status — IN_PLAY | PAUSED | FINISHED */}
-          <span>{match.status}</span>
+          </div>
+          <div className="team-row away">
+            <span>{match.awayTeam.name}</span>
+            <img src={match.awayTeam.crest} alt={match.awayTeam.name} width={24} />
+          </div>
         </div>
       ))}
     </div>

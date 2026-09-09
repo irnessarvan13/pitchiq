@@ -1,94 +1,100 @@
 /*
-Standings.tsx has one job: display the Premier League standings table.
-1. Call getStandings() when it loads
-2. Store the data in state
+Standings.tsx — displays the league standings table.
+1. Call getStandings() when it loads or when competition changes
+2. Store the data, matchday, and competition name in state
 3. Show a loading message while waiting
 4. Render a table with position, team crest, team name, played, won, drawn, lost, GD, points
+5. Shows current matchday in the header
 
-Component pattern: useState stores data → useEffect fetches it → render displays it
+Props: receives competition from App.tsx — re-fetches when competition changes
 */
 
-// useState = stores data in the component | useEffect = runs code after component renders
 import { useState, useEffect } from 'react'
-
-// import the getStandings function from our API layer
-// ../ goes up one folder from components to src, then into api/football
 import { getStandings } from '../api/football'
 
-// interface defines the shape of one standings row
-// TypeScript uses this to catch errors and provide autocomplete
 interface StandingEntry {
-  position: number                        // league position 
-  team: { name: string; crest: string }   // nested object — team name and badge image URL
-  playedGames: number                     // total games played
-  won: number                             // total wins
-  draw: number                            // total draws
-  lost: number                            // total losses
-  points: number                          // total points
-  goalDifference: number                  // goals scored minus goals conceded
+  position: number
+  team: { name: string; crest: string }
+  playedGames: number
+  won: number
+  draw: number
+  lost: number
+  points: number
+  goalDifference: number
 }
 
-// Standings component 
-function Standings() {
-  // standings = the data | setStandings = function to update it | starts as empty array
-  // <StandingEntry[]> tells TypeScript this is an array of StandingEntry objects
-  const [standings, setStandings] = useState<StandingEntry[]>([])
+interface StandingsProps {
+  competition: string
+}
 
-  // loading = true while fetching | false when data arrives or on error
-  // used to show loading message while waiting for API response
+function Standings({ competition }: StandingsProps) {
+  const [standings, setStandings] = useState<StandingEntry[]>([])
+  const [matchday, setMatchday] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // useEffect runs once when the component first loads
-  // [] at the end = dependency array — empty means run once only
   useEffect(() => {
-    getStandings()                        // calls football.ts → FastAPI → football-data.org
+    setLoading(true)
+    getStandings(competition)
       .then(data => {
-        setStandings(data)                // store standings in state — React re-renders automatically
-        setLoading(false)                 // hide loading message — show the table
+        setStandings(data.table)
+        setMatchday(data.matchday)
+        setLoading(false)
       })
       .catch(err => {
-        console.error('Error fetching standings:', err)  // log error for debugging
-        setLoading(false)                 // stop loading even on error — don't show spinner forever
+        console.error('Error fetching standings:', err)
+        setLoading(false)
       })
-  }, [])                                  // empty array = run once on mount only
+  }, [competition])
 
-  // early return — if still loading show message instead of empty table
-  if (loading) return <div>Loading standings...</div>
+  if (loading) return (
+    <div className="card">
+      <h2>Standings</h2>
+      <p className="loading">Loading standings...</p>
+    </div>
+  )
 
   return (
-    <div>
-      <h2>Premier League Standings</h2>
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #2d3250' }}>
+        <h2 style={{ margin: 0 }}>Standings</h2>
+        {matchday && (
+          <span style={{ color: '#8b95a5', fontSize: '13px' }}>
+            Matchday {matchday}
+          </span>
+        )}
+      </div>
       <table>
         <thead>
           <tr>
-            {/* table headers — abbreviated like real standings tables */}
             <th>Pos</th>
             <th>Team</th>
-            <th>P</th>   {/* played */}
-            <th>W</th>   {/* won */}
-            <th>D</th>   {/* draw */}
-            <th>L</th>   {/* lost */}
-            <th>GD</th>  {/* goal difference */}
-            <th>Pts</th> {/* points */}
+            <th>P</th>
+            <th>W</th>
+            <th>D</th>
+            <th>L</th>
+            <th>GD</th>
+            <th>Pts</th>
           </tr>
         </thead>
         <tbody>
-          {/* map() loops through standings array and renders one row per team */}
           {standings.map(entry => (
-            // key must be unique — React uses it to efficiently update the UI
             <tr key={entry.position}>
-              <td>{entry.position}</td>
+              <td className={
+                entry.position <= 4 ? 'position-top4' :
+                entry.position >= 18 ? 'position-relegation' : ''
+              }>{entry.position}</td>
               <td>
-                {/* team badge image from football-data.org CDN */}
-                <img src={entry.team.crest} alt={entry.team.name} width={20} />
-                {entry.team.name}
+                <div className="team-cell">
+                  <img src={entry.team.crest} alt={entry.team.name} width={24} />
+                  {entry.team.name}
+                </div>
               </td>
               <td>{entry.playedGames}</td>
               <td>{entry.won}</td>
               <td>{entry.draw}</td>
               <td>{entry.lost}</td>
               <td>{entry.goalDifference}</td>
-              <td>{entry.points}</td>
+              <td><strong>{entry.points}</strong></td>
             </tr>
           ))}
         </tbody>
@@ -97,6 +103,4 @@ function Standings() {
   )
 }
 
-// export default makes this component importable in App.tsx
-// without this App.tsx cannot use Standings
 export default Standings
