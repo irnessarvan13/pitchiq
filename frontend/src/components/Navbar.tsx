@@ -4,7 +4,6 @@ Shows PitchIQ logo and navigation links.
 Active link highlights green based on which section is visible on screen.
 Uses Intersection Observer to detect which section is in view.
 */
-
 import { useState, useEffect } from 'react'
 
 function Navbar() {

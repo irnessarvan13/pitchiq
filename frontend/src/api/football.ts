@@ -84,16 +84,16 @@ export async function getStandings(competition: string = 'PL') {
     params: { competition }
   })
   return {
-    table: response.data.standings[0].table,         // standings array
-    matchday: response.data.season.currentMatchday,   // current matchday number
-    competition: response.data.competition.name       // competition name e.g. Premier League
+    table: response.data.standings[0].table,          // standings array
+    matchday: response.data.season.currentMatchday,    // current matchday number
+    competition: response.data.competition.name        // competition name
   }
 }
 
-// get top scorers — defaults to PL, pass 'BL1' for Bundesliga etc.
+// get top scorers
 export async function getTopScorers(competition: string = 'PL'): Promise<TopScorer[]> {
   const response = await axios.get(`${API_BASE}/football/scorers`, {
-    params: { competition }              // axios adds ?competition=PL to the URL automatically
+    params: { competition }
   })
-  return response.data.scorers           // scorers array nested inside scorers key — extract just the array
+  return response.data.scorers                        // extract scorers array from full response
 }
