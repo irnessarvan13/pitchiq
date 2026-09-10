@@ -42,7 +42,7 @@ function getFlag(nationality: string): string {
     'Denmark': '🇩🇰',
     'Sweden': '🇸🇪',
     'Croatia': '🇭🇷',
-    'Bosnia': '🇧🇦',
+    'Bosnia-Herzegovina': '🇧🇦',
     'Poland': '🇵🇱',
     'Senegal': '🇸🇳',
     'Ghana': '🇬🇭',
@@ -82,12 +82,13 @@ function TopScorers({ competition }: TopScorersProps) {
   const [scorers, setScorers] = useState<TopScorer[]>([])  // scorers = data | starts as empty array
   const [loading, setLoading] = useState(true)              // true while fetching | false when done
 
-  // re-runs every time competition changes
+   // re-runs every time competition changes
   // [competition] in dependency array = re-run when this value changes
   useEffect(() => {
     setLoading(true)                                // reset loading when competition changes
     getTopScorers(competition)                      // calls football.ts → FastAPI → football-data.org
       .then(data => {
+        console.log('Nationalities:', data.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setScorers(data)                            // store scorers in state
         setLoading(false)                           // hide loading message
       })

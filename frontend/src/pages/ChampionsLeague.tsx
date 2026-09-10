@@ -3,6 +3,12 @@ ChampionsLeague.tsx — dedicated page for the UEFA Champions League.
 Shows live UCL matches, group standings, and top scorers.
 Uses React Router's Link for navigation back to the main dashboard.
 */
+/*
+ChampionsLeague.tsx — dedicated page for the UEFA Champions League.
+Special dark blue and gold aesthetic — the crown jewel of club football.
+Shows live UCL matches, group standings, and top scorers.
+Uses React Router's Link for navigation back to the main dashboard.
+*/
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'          // for navigation back to dashboard
@@ -42,6 +48,37 @@ interface LiveMatch {
   utcDate: string
 }
 
+// converts nationality to flag emoji — same as TopScorers.tsx
+function getFlag(nationality: string): string {
+  const flags: Record<string, string> = {
+    'Norway': '🇳🇴', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹',
+    'Germany': '🇩🇪', 'France': '🇫🇷', 'Spain': '🇪🇸',
+    'Brazil': '🇧🇷', 'Argentina': '🇦🇷', 'Netherlands': '🇳🇱',
+    'Belgium': '🇧🇪', 'Italy': '🇮🇹', 'Denmark': '🇩🇰',
+    'Sweden': '🇸🇪', 'Croatia': '🇭🇷', 'Bosnia-Herzegovina': '🇧🇦',
+    'Poland': '🇵🇱', 'Senegal': '🇸🇳', 'Ghana': '🇬🇭',
+    'Nigeria': '🇳🇬', 'Morocco': '🇲🇦', 'Colombia': '🇨🇴',
+    'Uruguay': '🇺🇾', 'Austria': '🇦🇹', 'Switzerland': '🇨🇭',
+    'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Ireland': '🇮🇪',
+    'Czech Republic': '🇨🇿', 'Slovakia': '🇸🇰', 'Turkey': '🇹🇷',
+    'Ukraine': '🇺🇦', 'Japan': '🇯🇵', 'South Korea': '🇰🇷',
+    'Bosnia and Herzegovina': '🇧🇦', 'Slovenia': '🇸🇮', 'Finland': '🇫🇮',
+    'Romania': '🇷🇴', 'Bulgaria': '🇧🇬', 'Albania': '🇦🇱',
+    'Kosovo': '🇽🇰', 'North Macedonia': '🇲🇰', 'Montenegro': '🇲🇪',
+    'Serbia': '🇷🇸', 'Ecuador': '🇪🇨', 'Peru': '🇵🇪',
+    'Chile': '🇨🇱', 'Venezuela': '🇻🇪', 'Paraguay': '🇵🇾',
+    'Bolivia': '🇧🇴', 'Costa Rica': '🇨🇷', 'Panama': '🇵🇦',
+    'Honduras': '🇭🇳', 'Cameroon': '🇨🇲', 'Mali': '🇲🇱',
+    'Guinea': '🇬🇳', 'Tunisia': '🇹🇳', 'South Africa': '🇿🇦',
+    'DR Congo': '🇨🇩', 'Ivory Coast': '🇨🇮', 'Algeria': '🇩🇿',
+    'Egypt': '🇪🇬', 'China': '🇨🇳', 'Iran': '🇮🇷',
+    'Saudi Arabia': '🇸🇦', 'Australia': '🇦🇺', 'United States': '🇺🇸',
+    'Canada': '🇨🇦', 'Jamaica': '🇯🇲', 'Mexico': '🇲🇽',
+    'Greece': '🇬🇷', 'Hungary': '🇭🇺', 'Russia': '🇷🇺',
+  }
+  return flags[nationality] || '🌍'
+}
+
 function ChampionsLeague() {
   const [standings, setStandings] = useState<StandingEntry[]>([])
   const [scorers, setScorers] = useState<TopScorer[]>([])
@@ -51,18 +88,21 @@ function ChampionsLeague() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // fetch UCL standings and scorers simultaneously
+    // fetch UCL standings, scorers, and live matches simultaneously
     Promise.all([
       getStandings(UCL),
       getTopScorers(UCL),
       getLiveMatches()
     ])
       .then(([standingsData, scorersData, liveData]) => {
+        console.log('UCL Nationalities:', scorersData.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setStandings(standingsData.table)
         setMatchday(standingsData.matchday)
         setScorers(scorersData)
-        // filter live matches to only UCL
-        const uclLive = liveData.filter((m: LiveMatch) => m.competition.name === 'UEFA Champions League')
+        // filter to ONLY UCL live matches
+        const uclLive = liveData.filter(
+          (m: LiveMatch) => m.competition.name === 'UEFA Champions League'
+        )
         setLiveMatches(uclLive)
         setLoading(false)
       })
@@ -73,7 +113,7 @@ function ChampionsLeague() {
       })
   }, [])
 
-    if (loading) return (
+  if (loading) return (
     <div className="ucl-page">
       <div className="ucl-loading">
         <div className="ucl-stars">★ ★ ★ ★ ★ ★ ★ ★</div>
@@ -112,7 +152,7 @@ function ChampionsLeague() {
 
       <div className="ucl-content">
 
-        {/* Live UCL Matches */}
+        {/* Live UCL Matches — only shows when UCL matches are live */}
         {liveMatches.length > 0 && (
           <div className="ucl-card">
             <h2 className="ucl-card-title">🔴 Live Now</h2>
@@ -172,7 +212,7 @@ function ChampionsLeague() {
           </table>
         </div>
 
-        {/* UCL Top Scorers */}
+        {/* UCL Top Scorers with nationality flags */}
         <div className="ucl-card">
           <h2 className="ucl-card-title">Top Scorers</h2>
           <table className="ucl-table">
@@ -189,7 +229,7 @@ function ChampionsLeague() {
               {scorers.map((scorer, index) => (
                 <tr key={index}>
                   <td style={{ color: '#f59e0b' }}>{index + 1}</td>
-                  <td><strong>{scorer.player.name}</strong></td>
+                  <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
                   <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>
                   <td><strong style={{ color: '#f59e0b' }}>{scorer.goals}</strong></td>
                   <td>{scorer.assists ?? 'N/A'}</td>
