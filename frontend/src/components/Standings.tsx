@@ -28,6 +28,40 @@ interface StandingsProps {
   competition: string
 }
 
+// get zone class based on competition and position
+function getZoneClass(position: number, competition: string, index: number, total: number): string {
+  const fromBottom = total - index  // how many teams from the bottom (1 = last, 2 = second to last)
+
+  switch(competition) {
+    case 'PL':
+      if (position <= 4) return 'position-top4'
+      if (position === 5) return 'position-europa'
+      if (fromBottom <= 3) return 'position-relegation'   // bottom 3 rows
+      return ''
+    case 'BL1':
+      if (position <= 4) return 'position-top4'
+      if (position === 5) return 'position-europa'
+      if (fromBottom === 3) return 'position-playoff'     // 3rd from bottom
+      if (fromBottom <= 2) return 'position-relegation'   // bottom 2 rows
+      return ''
+    case 'PD':
+      if (position <= 4) return 'position-top4'
+      if (position <= 6) return 'position-europa'
+      if (fromBottom <= 3) return 'position-relegation'   // bottom 3 rows
+      return ''
+    case 'FL1':
+      if (position <= 3) return 'position-top4'
+      if (position <= 5) return 'position-europa'
+      if (fromBottom === 3) return 'position-playoff'     // 3rd from bottom
+      if (fromBottom <= 2) return 'position-relegation'   // bottom 2 rows
+      return ''
+    default:
+      if (position <= 4) return 'position-top4'
+      if (fromBottom <= 3) return 'position-relegation'
+      return ''
+  }
+}
+
 function Standings({ competition }: StandingsProps) {
   const [standings, setStandings] = useState<StandingEntry[]>([])
   const [matchday, setMatchday] = useState<number | null>(null)
@@ -78,13 +112,10 @@ function Standings({ competition }: StandingsProps) {
             <th>Pts</th>
           </tr>
         </thead>
-        <tbody>
-          {standings.map(entry => (
-            <tr key={entry.position}>
-              <td className={
-                entry.position <= 4 ? 'position-top4' :
-                entry.position >= 18 ? 'position-relegation' : ''
-              }>{entry.position}</td>
+          <tbody>
+          {standings.map((entry, index) => (
+            <tr key={index}>
+              <td className={getZoneClass(entry.position, competition, index, standings.length)}>{entry.position}</td>
               <td>
                 <div className="team-cell">
                   <img src={entry.team.crest} alt={entry.team.name} width={24} />
@@ -101,6 +132,28 @@ function Standings({ competition }: StandingsProps) {
           ))}
         </tbody>
       </table>
+
+      {/* Zone legend */}
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #2d3250' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#22c55e' }}></div>
+          Champions League
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#3b82f6' }}></div>
+          Europa League
+        </div>
+        {(competition === 'BL1' || competition === 'FL1') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#f97316' }}></div>
+            Relegation Playoff
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#ef4444' }}></div>
+          Relegation
+        </div>
+      </div>
 
       {/* AI Match Prediction section */}
       <div style={{ marginTop: '24px', borderTop: '1px solid #2d3250', paddingTop: '20px' }}>
