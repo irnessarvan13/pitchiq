@@ -25,6 +25,57 @@ interface TopScorersProps {
   competition: string                               // competition code — 'PL', 'BL1', 'SA' etc.
 }
 
+// converts nationality name to flag emoji
+function getFlag(nationality: string): string {
+  const flags: Record<string, string> = {
+    'Norway': '🇳🇴',
+    'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'Portugal': '🇵🇹',
+    'Germany': '🇩🇪',
+    'France': '🇫🇷',
+    'Spain': '🇪🇸',
+    'Brazil': '🇧🇷',
+    'Argentina': '🇦🇷',
+    'Netherlands': '🇳🇱',
+    'Belgium': '🇧🇪',
+    'Italy': '🇮🇹',
+    'Denmark': '🇩🇰',
+    'Sweden': '🇸🇪',
+    'Croatia': '🇭🇷',
+    'Bosnia': '🇧🇦',
+    'Poland': '🇵🇱',
+    'Senegal': '🇸🇳',
+    'Ghana': '🇬🇭',
+    'Nigeria': '🇳🇬',
+    'Ivory Coast': '🇨🇮',
+    'Morocco': '🇲🇦',
+    'Algeria': '🇩🇿',
+    'Egypt': '🇪🇬',
+    'Colombia': '🇨🇴',
+    'Uruguay': '🇺🇾',
+    'Mexico': '🇲🇽',
+    'Austria': '🇦🇹',
+    'Switzerland': '🇨🇭',
+    'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+    'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+    'Ireland': '🇮🇪',
+    'Czech Republic': '🇨🇿',
+    'Slovakia': '🇸🇰',
+    'Hungary': '🇭🇺',
+    'Greece': '🇬🇷',
+    'Turkey': '🇹🇷',
+    'Ukraine': '🇺🇦',
+    'Russia': '🇷🇺',
+    'Japan': '🇯🇵',
+    'South Korea': '🇰🇷',
+    'Australia': '🇦🇺',
+    'United States': '🇺🇸',
+    'Canada': '🇨🇦',
+    'Jamaica': '🇯🇲',
+  }
+  return flags[nationality] || '🌍'  // default globe if not found
+}
+
 // TopScorers component — receives competition as a prop from App.tsx
 function TopScorers({ competition }: TopScorersProps) {
 
@@ -72,7 +123,7 @@ function TopScorers({ competition }: TopScorersProps) {
             // index used as key — scorers don't have a unique id at top level
             <tr key={index}>
               <td style={{ color: '#8b95a5' }}>{index + 1}</td>   {/* rank number */}
-              <td><strong>{scorer.player.name}</strong></td>       {/* player name */}
+              <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
               <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>  {/* team name */}
               <td><strong>{scorer.goals}</strong></td>             {/* total goals */}
               <td>{scorer.assists ?? 'N/A'}</td>                  {/* N/A if assists is null */}
@@ -86,3 +137,8 @@ function TopScorers({ competition }: TopScorersProps) {
 
 // export default makes TopScorers importable in App.tsx
 export default TopScorers
+
+
+
+
+
