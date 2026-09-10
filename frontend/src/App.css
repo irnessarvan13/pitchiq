@@ -380,3 +380,110 @@ tbody tr:hover {
   text-align: center;
   min-width: 60px;
 }
+
+
+
+/* ─────────────────────────────────────────────
+   AI PREDICTION
+   ───────────────────────────────────────────── */
+
+.prediction-container {
+  margin-top: 8px;
+}
+
+.predict-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);  /* purple gradient — AI feel */
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.predict-btn:hover {
+  opacity: 0.85;
+}
+
+.predict-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.prediction-loading {
+  color: #8b95a5;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.prediction-error {
+  color: #ef4444;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.prediction-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.prediction-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.predict-again-btn {
+  background: none;
+  border: none;
+  color: #8b95a5;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+.predict-again-btn:hover {
+  color: #ffffff;
+}
+
+.prediction-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+}
+
+.prediction-text p {
+  margin: 4px 0;
+}
+
+
+.team-select {
+  background: #242840;
+  color: #ffffff;
+  border: 1px solid #2d3250;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.team-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}

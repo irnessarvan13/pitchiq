@@ -11,6 +11,7 @@ Props: receives competition from App.tsx — re-fetches when competition changes
 
 import { useState, useEffect } from 'react'
 import { getStandings } from '../api/football'
+import MatchPrediction from './MatchPrediction'        // AI prediction component
 
 interface StandingEntry {
   position: number
@@ -31,6 +32,7 @@ function Standings({ competition }: StandingsProps) {
   const [standings, setStandings] = useState<StandingEntry[]>([])
   const [matchday, setMatchday] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedTeams, setSelectedTeams] = useState<{home: StandingEntry, away: StandingEntry} | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -99,6 +101,62 @@ function Standings({ competition }: StandingsProps) {
           ))}
         </tbody>
       </table>
+
+      {/* AI Match Prediction section */}
+      <div style={{ marginTop: '24px', borderTop: '1px solid #2d3250', paddingTop: '20px' }}>
+        <h3 style={{ fontSize: '14px', color: '#8b95a5', marginBottom: '12px', fontWeight: 500 }}>
+          🤖 AI Match Prediction
+        </h3>
+
+        {/* team selectors */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+          <select
+            className="team-select"
+            value={selectedTeams?.home.position ?? ''}
+            onChange={e => {
+              const team = standings.find(s => s.position === Number(e.target.value))
+              if (team) setSelectedTeams(prev => ({ home: team, away: prev?.away ?? standings[1] }))
+            }}
+          >
+            <option value="">Home team</option>
+            {standings.map(s => (
+              <option key={s.position} value={s.position}>{s.team.name}</option>
+            ))}
+          </select>
+
+          <span style={{ color: '#8b95a5' }}>vs</span>
+
+          <select
+            className="team-select"
+            value={selectedTeams?.away.position ?? ''}
+            onChange={e => {
+              const team = standings.find(s => s.position === Number(e.target.value))
+              if (team) setSelectedTeams(prev => ({ home: prev?.home ?? standings[0], away: team }))
+            }}
+          >
+            <option value="">Away team</option>
+            {standings.map(s => (
+              <option key={s.position} value={s.position}>{s.team.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* show prediction component when both teams selected */}
+        {selectedTeams?.home && selectedTeams?.away && (
+          <MatchPrediction
+            homeTeam={selectedTeams.home.team.name}
+            awayTeam={selectedTeams.away.team.name}
+            competition={competition}
+            homePosition={selectedTeams.home.position}
+            awayPosition={selectedTeams.away.position}
+            homePoints={selectedTeams.home.points}
+            awayPoints={selectedTeams.away.points}
+            homeGd={selectedTeams.home.goalDifference}
+            awayGd={selectedTeams.away.goalDifference}
+            matchday={matchday ?? 1}
+          />
+        )}
+      </div>
     </div>
   )
 }

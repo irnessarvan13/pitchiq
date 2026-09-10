@@ -97,3 +97,21 @@ export async function getTopScorers(competition: string = 'PL'): Promise<TopScor
   })
   return response.data.scorers                        // extract scorers array from full response
 }
+
+
+// send match data to FastAPI which calls Claude API for a prediction
+export async function predictMatch(matchData: {
+  home_team: string
+  away_team: string
+  competition: string
+  home_position: number
+  away_position: number
+  home_points: number
+  away_points: number
+  home_gd: number
+  away_gd: number
+  matchday: number
+}): Promise<string> {
+  const response = await axios.post(`${API_BASE}/predict`, matchData)
+  return response.data.prediction    // returns Claude's prediction text
+}

@@ -36,6 +36,8 @@ from backend.database import engine, Base, get_db           # engine + Base = cr
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
 from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team      # imports football API functions
+from backend.predict import get_prediction                  # imports the Claude prediction function
+
 
 app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
 
@@ -164,3 +166,28 @@ async def football_matchdetail(match_id: int):
 async def football_team(team_id: int):
     data = await get_team(team_id)                          # calls football.py with the team id
     return data                                             # full team info sent back to React as JSON
+
+
+
+
+# POST /predict — generates an AI match prediction using Claude
+# receives match data from React, calls Claude API, returns prediction text
+# POST because we are sending data to the server — match details in the request body
+@app.post("/predict")
+async def predict_match(match_data: dict):
+    try:
+        prediction = await get_prediction(
+            home_team=match_data["home_team"],          # home team name
+            away_team=match_data["away_team"],          # away team name
+            competition=match_data["competition"],       # competition name
+            home_position=match_data["home_position"],  # home team league position
+            away_position=match_data["away_position"],  # away team league position
+            home_points=match_data["home_points"],      # home team points
+            away_points=match_data["away_points"],      # away team points
+            home_gd=match_data["home_gd"],              # home team goal difference
+            away_gd=match_data["away_gd"],              # away team goal difference
+            matchday=match_data["matchday"]             # current matchday number
+        )
+        return {"prediction": prediction}               # return prediction text to React
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))  # return error if something goes wrong
