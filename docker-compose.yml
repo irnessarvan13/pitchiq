@@ -1,0 +1,58 @@
+# docker-compose.yml — defines all 4 containers and how they connect
+# run with: docker-compose up
+
+version: '3.8'
+
+services:
+
+  # PostgreSQL database
+  db:
+    image: postgres:16                    # official PostgreSQL 16 image
+    environment:
+      POSTGRES_DB: pitchiq               # creates a database called pitchiq
+      POSTGRES_USER: postgres            # default user
+      POSTGRES_PASSWORD: postgres        # default password — change in production
+    ports:
+      - "5432:5432"                      # host:container port mapping
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # persist data between restarts
+
+  # Redis cache
+  redis:
+    image: redis:7                        # official Redis 7 image
+    ports:
+      - "6379:6379"                      # host:container port mapping
+  # FastAPI backend
+  backend:
+    build:
+      context: .                         # build from root directory
+      dockerfile: backend/Dockerfile     # use backend Dockerfile
+    ports:
+      - "8000:8000"                      # host:container port mapping
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/pitchiq  # points to db container
+      FOOTBALL_API_KEY: ${FOOTBALL_API_KEY}      # reads from .env file
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}    # reads from .env file
+      REDIS_HOST: redis                          # tells backend to connect to redis container not localhost
+    depends_on:
+      - db                               # wait for database to start first
+      - redis                            # wait for redis to start first
+    volumes:
+      - .:/app                           # mount code so changes reflect immediately
+
+  # React frontend
+  frontend:
+    build:
+      context: ./frontend                # build from frontend directory
+      dockerfile: Dockerfile             # use frontend Dockerfile
+    ports:
+      - "5173:5173"                      # host:container port mapping
+    depends_on:
+      - backend                          # wait for backend to start first
+    volumes:
+      - ./frontend:/app                  # mount code so changes reflect immediately
+      - /app/node_modules                # don't override node_modules with local
+
+# named volume for PostgreSQL data persistence
+volumes:
+  postgres_data:

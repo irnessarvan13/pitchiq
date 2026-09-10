@@ -21,8 +21,9 @@ load_dotenv()                             # actually reads the .env file — mus
 API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key from .env — keeps it off GitHub and out of code
 BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
 
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')  # uses 'redis' in Docker, 'localhost' locally
 
-cache = redis.Redis(host='localhost', port=6379, db=0) #storing the connection to redis to a variable called cache
+cache = redis.Redis(host=REDIS_HOST, port=6379, db=0) #storing the connection to redis to a variable called cache
 CACHE_TTL = 60  # cache data for 60 seconds
 
 def get_cached(key: str):
