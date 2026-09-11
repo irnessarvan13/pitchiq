@@ -1,8 +1,6 @@
 # docker-compose.yml — defines all 4 containers and how they connect
 # run with: docker-compose up
 
-version: '3.8'
-
 services:
 
   # PostgreSQL database
@@ -22,6 +20,7 @@ services:
     image: redis:7                        # official Redis 7 image
     ports:
       - "6379:6379"                      # host:container port mapping
+
   # FastAPI backend
   backend:
     build:
@@ -47,6 +46,8 @@ services:
       dockerfile: Dockerfile             # use frontend Dockerfile
     ports:
       - "5173:5173"                      # host:container port mapping
+    environment:
+      VITE_API_URL: http://backend:8000  # points to backend container — not localhost
     depends_on:
       - backend                          # wait for backend to start first
     volumes:
