@@ -37,7 +37,7 @@ function Navbar() {
         {/* Link to home — instant navigation, no page refresh */}
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="navbar-logo">⚽</span>
-          <span className="navbar-title">PitchIQQ</span>
+          <span className="navbar-title">PitchIQ</span>
         </Link>
       </div>
       <div className="navbar-links">
