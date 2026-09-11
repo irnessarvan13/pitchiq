@@ -106,10 +106,10 @@ function TopScorers({ competition }: TopScorersProps) {
     </div>
   )
 
-  return (
+    return (
     <div className="card">
       <h2>Top Scorers</h2>
-      <table>
+      <table className="scorers-table">
         <thead>
           <tr>
             <th>#</th>
@@ -121,13 +121,12 @@ function TopScorers({ competition }: TopScorersProps) {
         </thead>
         <tbody>
           {scorers.map((scorer, index) => (
-            // index used as key — scorers don't have a unique id at top level
             <tr key={index}>
-              <td style={{ color: '#8b95a5' }}>{index + 1}</td>   {/* rank number */}
+              <td style={{ color: '#8b95a5' }}>{index + 1}</td>
               <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
-              <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>  {/* team name */}
-              <td><strong>{scorer.goals}</strong></td>             {/* total goals */}
-              <td>{scorer.assists ?? 'N/A'}</td>                  {/* N/A if assists is null */}
+              <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>
+              <td><strong>{scorer.goals}</strong></td>
+              <td>{scorer.assists ?? 'N/A'}</td>
             </tr>
           ))}
         </tbody>

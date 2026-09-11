@@ -488,8 +488,6 @@ tbody tr:hover {
   border-color: #6366f1;
 }
 
-
-
 /* ─────────────────────────────────────────────
    MOBILE LAYOUT — screens smaller than 768px
    ───────────────────────────────────────────── */
@@ -544,6 +542,14 @@ tbody tr:hover {
   .standings-table td:nth-child(5),
   .standings-table th:nth-child(6),
   .standings-table td:nth-child(6) {
+    display: none;
+  }
+
+  /* scorers table — hide team and assists on mobile, keep player and goals */
+  .scorers-table th:nth-child(3),
+  .scorers-table td:nth-child(3),
+  .scorers-table th:nth-child(5),
+  .scorers-table td:nth-child(5) {
     display: none;
   }
 

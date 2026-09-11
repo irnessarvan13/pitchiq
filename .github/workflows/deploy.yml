@@ -1,0 +1,34 @@
+# deploy.yml — GitHub Actions CI/CD pipeline
+# runs automatically when you push to the main branch
+# SSHs into AWS server, pulls latest code, rebuilds Docker containers
+
+name: Deploy PitchIQ
+
+# trigger — runs when you push to main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest        # GitHub runs this on their own Ubuntu server
+
+    steps:
+      # step 1 — checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # step 2 — SSH into AWS and deploy
+      - name: Deploy to AWS
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.AWS_HOST }}        # your AWS IP — stored in GitHub Secrets
+          username: ubuntu                      # AWS default username
+          key: ${{ secrets.AWS_SSH_KEY }}      # your .pem key — stored in GitHub Secrets
+          script: |
+            cd ~/pitchiq
+            git pull origin main
+            docker-compose down
+            docker-compose up --build -d
+            echo "PitchIQ deployed successfully!"
