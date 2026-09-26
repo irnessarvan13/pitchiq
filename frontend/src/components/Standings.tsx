@@ -91,15 +91,15 @@ function Standings({ competition }: StandingsProps) {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #2d3250' }}>
-        <h2 style={{ margin: 0 }}>Standings</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--line)' }}>
+        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Standings</h2>
         {matchday && (
-          <span style={{ color: '#8b95a5', fontSize: '13px' }}>
+          <span style={{ color: 'var(--ink-muted)', fontSize: '13px' }}>
             Matchday {matchday}
           </span>
         )}
       </div>
-      <table>
+      <table className="standings-table">
         <thead>
           <tr>
             <th>Pos</th>
@@ -134,31 +134,31 @@ function Standings({ competition }: StandingsProps) {
       </table>
 
       {/* Zone legend */}
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #2d3250' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#22c55e' }}></div>
+      <div className="zone-legend">
+        <div className="zone-legend-item">
+          <div className="zone-legend-dot" style={{ background: 'var(--pitch)' }}></div>
           Champions League
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#3b82f6' }}></div>
+        <div className="zone-legend-item">
+          <div className="zone-legend-dot" style={{ background: 'var(--blue)' }}></div>
           Europa League
         </div>
         {(competition === 'BL1' || competition === 'FL1') && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#f97316' }}></div>
+          <div className="zone-legend-item">
+            <div className="zone-legend-dot" style={{ background: 'var(--gold)' }}></div>
             Relegation Playoff
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#8b95a5' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#ef4444' }}></div>
+        <div className="zone-legend-item">
+          <div className="zone-legend-dot" style={{ background: 'var(--red)' }}></div>
           Relegation
         </div>
       </div>
 
       {/* AI Match Prediction section */}
-      <div style={{ marginTop: '24px', borderTop: '1px solid #2d3250', paddingTop: '20px' }}>
-        <h3 style={{ fontSize: '14px', color: '#8b95a5', marginBottom: '12px', fontWeight: 500 }}>
-          🤖 AI Match Prediction
+      <div style={{ marginTop: '24px', borderTop: '1px solid var(--line)', paddingTop: '20px' }}>
+        <h3 className="prediction-section-title">
+          Ask Claude to call this one
         </h3>
 
         {/* team selectors */}

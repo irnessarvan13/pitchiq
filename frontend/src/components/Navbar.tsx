@@ -45,7 +45,7 @@ function Navbar() {
         <a href="#scorers" className={`navbar-link ${activeSection === 'scorers' ? 'navbar-link-active' : ''}`}>Scorers</a>
         <a href="#standings" className={`navbar-link ${activeSection === 'standings' ? 'navbar-link-active' : ''}`}>Standings</a>
         {/* Champions League link — gold color to stand out */}
-        <Link to="/champions-league" className="navbar-link" style={{ color: '#f59e0b' }}>⭐ UCL</Link>
+        <Link to="/champions-league" className="navbar-link navbar-link-ucl">UCL</Link>
       </div>
     </nav>
   )

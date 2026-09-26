@@ -122,9 +122,9 @@ function TopScorers({ competition }: TopScorersProps) {
         <tbody>
           {scorers.map((scorer, index) => (
             <tr key={index}>
-              <td style={{ color: '#8b95a5' }}>{index + 1}</td>
+              <td style={{ fontFamily: 'var(--font-score)', fontSize: '16px', color: 'var(--ink)' }}>{index + 1}</td>
               <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
-              <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>
+              <td style={{ color: 'var(--ink-muted)' }}>{scorer.team.name}</td>
               <td><strong>{scorer.goals}</strong></td>
               <td>{scorer.assists ?? 'N/A'}</td>
             </tr>

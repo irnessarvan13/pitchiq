@@ -125,7 +125,7 @@ function ChampionsLeague() {
   if (error) return (
     <div className="ucl-page">
       <div className="ucl-loading">
-        <p style={{ color: '#f59e0b' }}>{error}</p>
+        <p style={{ color: 'var(--gold)' }}>{error}</p>
         <Link to="/" className="ucl-back-btn">← Back to Dashboard</Link>
       </div>
     </div>
@@ -228,10 +228,10 @@ function ChampionsLeague() {
             <tbody>
               {scorers.map((scorer, index) => (
                 <tr key={index}>
-                  <td style={{ color: '#f59e0b' }}>{index + 1}</td>
+                  <td style={{ fontFamily: 'var(--font-score)', fontSize: '16px', color: 'var(--gold)' }}>{index + 1}</td>
                   <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
-                  <td style={{ color: '#8b95a5' }}>{scorer.team.name}</td>
-                  <td><strong style={{ color: '#f59e0b' }}>{scorer.goals}</strong></td>
+                  <td style={{ color: 'var(--ink-muted)' }}>{scorer.team.name}</td>
+                  <td><strong style={{ color: 'var(--gold)' }}>{scorer.goals}</strong></td>
                   <td>{scorer.assists ?? 'N/A'}</td>
                 </tr>
               ))}

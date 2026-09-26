@@ -1,4 +1,31 @@
-/* Global reset and base styles */
+/* ─────────────────────────────────────────────
+   PITCHIQ — design tokens
+   Grounded in a stadium scoreboard: pitch green +
+   scoreboard amber on near-black, condensed numerals
+   for anything that reads like a score or a clock.
+   ───────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0b0f0c;
+  --surface: #12160f;
+  --surface-2: #181d14;
+  --pitch: #3f9a5c;
+  --pitch-dim: #2c6e42;
+  --gold: #e7b646;
+  --chalk: #f3f5ef;
+  --ink: #cdd2c7;
+  --ink-muted: #838a7c;
+  --line: rgba(243, 245, 239, 0.09);
+  --red: #d9614f;
+  --blue: #5891d1;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-score: 'Bebas Neue', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,38 +33,55 @@
 }
 
 body {
-  background-color: #1a1d2e;  /* dark navy background like FotMob */
-  color: #ffffff;              /* white text */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;  /* clean system font */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(63, 154, 92, 0.14), transparent 60%),
+    radial-gradient(ellipse 700px 400px at 100% 0%, rgba(231, 182, 70, 0.06), transparent 60%);
+  background-attachment: fixed;
+  color: var(--chalk);
+  font-family: var(--font-body);
   min-height: 100vh;
 }
 
 h1, h2, h3 {
+  font-family: var(--font-display);
   font-weight: 600;
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;   /* removes gaps between table cells */
+  border-collapse: collapse;
 }
 
 th {
-  color: #8b95a5;              /* muted grey for table headers */
+  color: var(--ink-muted);
+  font-family: var(--font-body);
   font-size: 12px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid #2d3250;
+  border-bottom: 1px solid var(--line);
 }
 
 td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #2d3250;  /* subtle row dividers */
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
   font-size: 14px;
 }
 
 img {
-  vertical-align: middle;      /* aligns images with text */
+  vertical-align: middle;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

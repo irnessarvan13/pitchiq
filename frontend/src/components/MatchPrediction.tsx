@@ -69,7 +69,7 @@ function MatchPrediction({
           onClick={handlePredict}
           disabled={loading}                           // disable while loading
         >
-          {loading ? '⚽ Analyzing...' : '🤖 AI Predict'}
+          {loading ? 'Analyzing…' : 'Predict this match'}
         </button>
       )}
 
@@ -92,7 +92,7 @@ function MatchPrediction({
       {prediction && (
         <div className="prediction-card">
           <div className="prediction-header">
-            <span className="prediction-badge">🤖 AI Prediction</span>
+            <span className="prediction-badge">Claude's call</span>
             <button
               className="predict-again-btn"
               onClick={() => setPrediction(null)}      // reset to show button again

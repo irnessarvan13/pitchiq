@@ -48,6 +48,12 @@ function App() {
       <Navbar />
       <div className="dashboard">
 
+        <div className="hero">
+          <h1 className="hero-title">
+            Live tables, live scores, and a Claude-powered read on who wins next.
+          </h1>
+        </div>
+
         {/* competition selector — clicking highlights immediately, API call fires after 500ms */}
         <div className="competition-selector">
           {COMPETITIONS.map(comp => (
