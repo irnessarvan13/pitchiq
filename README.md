@@ -144,6 +144,26 @@ npm run dev
 Visit `http://localhost:5173`
 
 ---
+## Running Tests
+
+Tests use [pytest](https://docs.pytest.org/). Test-only tools live in `requirements-dev.txt`, separate from `requirements.txt`, so the production server never installs them.
+
+```bash
+# 1. Install the app's packages plus the test tools (with your venv active)
+pip install -r requirements-dev.txt
+
+# 2. Start Postgres and Redis
+#    Needed for now: the backend connects to Postgres as soon as it loads.
+#    Issue #6 removes this step.
+docker compose up -d db redis
+
+# 3. Run every test from the project root
+pytest -v
+```
+
+Tests live in `tests/`, and pytest's settings are in `pytest.ini`.
+
+---
 
 ## Environment Variables
 
