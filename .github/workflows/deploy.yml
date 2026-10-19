@@ -1,17 +1,71 @@
 # deploy.yml — GitHub Actions CI/CD pipeline
-# runs automatically when you push to the main branch
-# SSHs into AWS server, pulls latest code, rebuilds Docker containers
+# runs on every pull request into main, and on every push to main
+# test job: runs pytest. deploy job: SSHs into AWS, pulls latest code, rebuilds Docker containers
+# deploy only runs after the tests pass, and only on pushes to main (never on pull requests)
 
-name: Deploy PitchIQ
+name: Test and Deploy PitchIQ
 
-# trigger — runs when you push to main branch
+# triggers — run on pushes to main and on pull requests into main
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest        # a fresh, empty Ubuntu computer from GitHub
+
+    # service containers — Postgres and Redis running next to the tests (same images as docker-compose.yml)
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: pitchiq
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres     # throwaway test database, deleted after every run
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    # environment variables for the steps — replaces the .env file, which isn't on GitHub
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pitchiq
+      FOOTBALL_API_KEY: fake-key-for-tests      # tests must never call the real API
+      ANTHROPIC_API_KEY: fake-key-for-tests     # tests must never call the real Claude
+
+    steps:
+      # step 1 — copy the code onto the empty computer
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # step 2 — install Python 3.12 (same version as backend/Dockerfile)
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # step 3 — install the app's packages plus the test tools
+      - name: Install packages
+        run: pip install -r requirements-dev.txt
+
+      # step 4 — run every test
+      - name: Run tests
+        run: pytest -v
+
   deploy:
+    needs: test                                # wait for the test job, and skip deploy if it fails
+    if: github.event_name == 'push'            # only deploy on pushes to main, never on pull requests
     runs-on: ubuntu-latest        # GitHub runs this on their own Ubuntu server
 
     steps:
