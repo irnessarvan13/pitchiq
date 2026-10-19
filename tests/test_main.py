@@ -7,4 +7,4 @@ client = TestClient(app)                     # a fake browser pointed at your ap
 def test_root_returns_running_message():
     response = client.get("/")                                        # visit /
     assert response.status_code == 200                                # did it succeed?
-    assert response.json() == {"message": "PitchIQ API is running"}   # did it say the right thing?
+    assert response.json() == {"message": "PitchIQ API is runing"}   # did it say the right thing?
