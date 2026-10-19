@@ -194,13 +194,16 @@ Get your Anthropic API key at [console.anthropic.com](https://console.anthropic.
 
 ## CI/CD
 
-Pushing to `main` automatically deploys to AWS EC2 via GitHub Actions:
+GitHub Actions (`.github/workflows/deploy.yml`) tests every change before it goes live.
 
-1. GitHub Actions detects push to main
-2. SSHes into EC2 server
-3. Pulls latest code
-4. Rebuilds Docker containers
-5. App updated with zero downtime
+**On every pull request into `main`:**
+1. Starts Postgres and Redis as service containers
+2. Installs the app and test tools on Python 3.12 (the same version as production)
+3. Runs `pytest`. Branch protection blocks merging if any test fails
+
+**On every push to `main`** (merging a PR):
+1. Runs the same tests
+2. Only if they pass: SSHes into the EC2 server, pulls the latest code and rebuilds the Docker containers. The site is briefly offline while the containers restart
 
 ---
 
