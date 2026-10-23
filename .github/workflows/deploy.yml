@@ -23,11 +23,11 @@ jobs:
       db:
         image: postgres:16
         env:
-          POSTGRES_DB: pitchiq
+          POSTGRES_DB: pitchiq_test       # the tests only ever use pitchiq_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres     # throwaway test database, deleted after every run
         ports:
-          - 5432:5432
+          - 5433:5432                     # same port as my Mac (5433 outside → 5432 inside)
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -40,7 +40,7 @@ jobs:
 
     # environment variables for the steps — replaces the .env file, which isn't on GitHub
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pitchiq
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/pitchiq_test
       FOOTBALL_API_KEY: fake-key-for-tests      # tests must never call the real API
       ANTHROPIC_API_KEY: fake-key-for-tests     # tests must never call the real Claude
 
