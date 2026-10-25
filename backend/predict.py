@@ -5,15 +5,22 @@ take match data, build a smart prompt with standings context, call Claude, retur
 
 import anthropic                          # Claude API library
 import os                                 # reads environment variables
+from functools import lru_cache           # remembers a function's result — so the client is only created once
 from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
 
 load_dotenv()                             # actually reads the .env file — must be called before os.getenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")  # reads Claude API key from .env 
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)  # creates the Claude API client — same concept as redis.Redis() or create_engine()
+# get_claude_client() — a dependency: FastAPI calls it and hands the client to /predict
+# @lru_cache = create the client the FIRST time it's asked for, then reuse that same one every time after
+# tests can swap it for a fake with app.dependency_overrides — so they never call the real Claude
+@lru_cache
+def get_claude_client():
+    return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)  # creates the Claude API client — same concept as redis.Redis() or create_engine()
 
 async def get_prediction(
+    client,                   # the Claude client — handed in by main.py instead of created at the top of this file
     home_team: str,           # home team name
     away_team: str,           # away team name
     competition: str,         # competition name e.g. Premier League
