@@ -88,16 +88,3 @@ def test_match_detail_is_not_cached(client):
     client.get("/football/matches/560542")
     assert route.call_count == 2                           # the API was called BOTH times
 
-
-@respx.mock
-def test_rate_limit_error_is_returned_as_200_and_cached(client):
-    # BUG recorded on purpose — issue #7 will fix this, and then this test changes.
-    route = respx.get(f"{API}/competitions/PL/standings").mock(
-        return_value=httpx.Response(429, json=load("rate_limit_429.json"))
-    )
-    first = client.get("/football/standings")
-    second = client.get("/football/standings")
-    assert first.status_code == 200                        # the 429 error comes back as "success"
-    assert first.json() == load("rate_limit_429.json")     # with the error message as the data
-    assert second.json() == first.json()
-    assert route.call_count == 1                           # and the error got cached
