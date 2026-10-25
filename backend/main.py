@@ -12,7 +12,9 @@ CORSMiddleware is the tool that allows React to talk to FastAPI across different
 
 Session is just a type hint in my endpoint functions.
 
-Import engine and Base to create the database tables on startup.
+Import engine and Base to create the database tables on startup (inside lifespan).
+If Postgres is down at startup, the server still starts — football pages keep working,
+and the database endpoints answer 503 until Postgres is back (see database_unavailable).
 I import get_db so FastAPI can automatically open a database session for each endpoint that needs it and close it when done.
 engine - the permanent connection to PostgreSQL. Always open.
 get_db - opens a temporary session for one request, gives it to the endpoint, then closes it.
@@ -29,9 +31,12 @@ FastAPI acts as the middleman: React → FastAPI → football-data.org → FastA
 API key stays on the server — never exposed to the browser.
 '''
 
+import logging                                               # writes errors to the server logs
 from contextlib import asynccontextmanager                    # lets us write the startup/shutdown "lifespan" function
 from fastapi import FastAPI, Depends, HTTPException          # FastAPI = app | Depends = inject db session | HTTPException = throw errors
 from fastapi.middleware.cors import CORSMiddleware           # allows React on port 3000 to talk to FastAPI on port 8000
+from fastapi.responses import JSONResponse                   # lets us build a custom JSON response (used for the 503 below)
+from sqlalchemy.exc import OperationalError                  # the error SQLAlchemy raises when it can't reach Postgres
 from sqlalchemy.orm import Session                           # type hint for db parameter in endpoints — gives autocomplete
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
@@ -40,16 +45,34 @@ from backend.football import get_matches, get_standings, get_topscorers, get_liv
 from backend.predict import get_prediction, get_claude_client   # the Claude prediction function + the dependency that provides the Claude client
 
 
+logger = logging.getLogger(__name__)                         # a logger named after this file ("backend.main")
+
+
 # lifespan — code that runs when the server STARTS (before yield) and STOPS (after yield)
 # table creation lives here instead of at the top level of the file,
 # so just importing main.py (like the tests do) no longer connects to Postgres
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)                    # runs once when the server starts — creates tables if they don't exist
+    try:
+        Base.metadata.create_all(bind=engine)                # runs once when the server starts — creates tables if they don't exist
+    except OperationalError as error:                        # Postgres is down — start anyway, football pages don't need it
+        logger.error("Postgres unavailable at startup — /matches will return 503 until it's back: %s", error)
     yield                                                    # the server runs while we're paused here
 
 
 app = FastAPI(lifespan=lifespan)                             # creates the single FastAPI app instance — everything attaches to this
+
+
+# if ANY endpoint can't reach Postgres, answer 503 with a short message instead of crashing with a 500
+# @app.exception_handler(X) = "whenever error X happens during a request, run this function instead"
+@app.exception_handler(OperationalError)
+async def database_unavailable(request, error):
+    logger.error("Postgres unavailable: %s", error)
+    return JSONResponse(
+        status_code=503,                                     # 503 = Service Unavailable — "try again soon"
+        content={"detail": "The database is temporarily unavailable. Please try again shortly."},
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -112,6 +135,12 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
 # FOOTBALL API ENDPOINTS — live data from football-data.org
 # ─────────────────────────────────────────────
 
+# GET /football/matches — fetches REAL live match data from football-data.org
+# async because we are awaiting an external API call over the internet — takes time
+# competition is a query parameter with default "PL" (Premier League)
+# React can pass ?competition=BL1 for Bundesliga, ?competition=SA for Serie A etc.
+# FastAPI acts as middleman: React → FastAPI → football-data.org → FastAPI → React
+# API key stays on the server — never exposed to the browser
 @app.get("/football/matches")
 async def football_matches(competition: str = "PL", cache=Depends(get_cache)):   # FastAPI hands us the Redis client
     data = await get_matches(cache, competition)           # calls football.py which calls football-data.org
@@ -190,3 +219,4 @@ async def predict_match(match_data: dict, claude=Depends(get_claude_client)):   
         return {"prediction": prediction}               # return prediction text to React
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))  # return error if something goes wrong
+
