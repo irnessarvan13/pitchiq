@@ -4,12 +4,12 @@ import os
 # This line must run BEFORE the app is imported, so it goes at the very top.
 os.environ["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5433/pitchiq_test"
 os.environ["FOOTBALL_API_KEY"] = "test-football-key"      # fake keys — tests never use your real ones
-os.environ["ANTHROPIC_API_KEY"] = "test-anthropic-key"
+os.environ["ANTHROPIC_API_KEY"] = "test-anthropic-key"  
 
 import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
-from backend.database import engine
+from backend.database import engine, Base
 from backend.models import Match
 from backend.football import cache
 
@@ -21,6 +21,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def clean_slate():
+    Base.metadata.create_all(bind=engine)           # make sure the tables exist (the app only creates them when the server starts)
     with engine.begin() as conn:
         conn.execute(Match.__table__.delete())      # empty the matches table
     cache.flushdb()                                 # empty the Redis cache

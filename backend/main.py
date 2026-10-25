@@ -29,6 +29,7 @@ FastAPI acts as the middleman: React → FastAPI → football-data.org → FastA
 API key stays on the server — never exposed to the browser.
 '''
 
+from contextlib import asynccontextmanager                    # lets us write the startup/shutdown "lifespan" function
 from fastapi import FastAPI, Depends, HTTPException          # FastAPI = app | Depends = inject db session | HTTPException = throw errors
 from fastapi.middleware.cors import CORSMiddleware           # allows React on port 3000 to talk to FastAPI on port 8000
 from sqlalchemy.orm import Session                           # type hint for db parameter in endpoints — gives autocomplete
@@ -39,7 +40,16 @@ from backend.football import get_matches, get_standings, get_topscorers, get_liv
 from backend.predict import get_prediction                  # imports the Claude prediction function
 
 
-app = FastAPI()                                              # creates the single FastAPI app instance — everything attaches to this
+# lifespan — code that runs when the server STARTS (before yield) and STOPS (after yield)
+# table creation lives here instead of at the top level of the file,
+# so just importing main.py (like the tests do) no longer connects to Postgres
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)                    # runs once when the server starts — creates tables if they don't exist
+    yield                                                    # the server runs while we're paused here
+
+
+app = FastAPI(lifespan=lifespan)                             # creates the single FastAPI app instance — everything attaches to this
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,7 +59,6 @@ app.add_middleware(
     allow_headers=["*"],                                     # allow all request headers
 )
 
-Base.metadata.create_all(bind=engine)                       # runs once on startup — reads all models and creates their tables in PostgreSQL if they don't exist
 
 # ─────────────────────────────────────────────
 # LOCAL DATABASE ENDPOINTS
