@@ -46,7 +46,7 @@ def make_redis_client(host: str, port: int = 6379):
 
 cache = make_redis_client(REDIS_HOST)     # the one Redis client the app uses — doesn't connect until first used
 CACHE_TTL = 60  # cache data for 60 seconds
-
+API_TIMEOUT = httpx.Timeout(10.0)         # decided on purpose: give football-data.org up to 10 seconds, then give up (httpx's hidden default is 5)
 
 # get_cache() — a dependency: FastAPI calls it and hands the Redis client to each football endpoint
 # tests can swap it for a fake (or a broken one) with app.dependency_overrides
@@ -84,8 +84,15 @@ def set_cached(cache, key: str, data, ttl: int = CACHE_TTL):
 async def fetch_from_api(url: str, params: dict | None = None):
     headers = {"X-Auth-Token": API_KEY}                     # API key goes in headers — X-Auth-Token is what football-data.org expects
 
-    async with httpx.AsyncClient() as client:               # async HTTP client — auto-closes when done, no memory leaks
-        response = await client.get(url, headers=headers, params=params)
+    try:
+        async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:   # async HTTP client — auto-closes when done, no memory leaks
+            response = await client.get(url, headers=headers, params=params)
+    except httpx.TimeoutException as error:                 # football-data.org didn't answer in time
+        logger.warning("football-data.org timed out for %s: %s", url, error)
+        raise HTTPException(status_code=504, detail="The football data service took too long to respond. Please try again.")  # 504 = Gateway Timeout
+    except httpx.RequestError as error:                     # couldn't reach football-data.org at all (network down, DNS, refused)
+        logger.warning("Couldn't reach football-data.org for %s: %s", url, error)
+        raise HTTPException(status_code=502, detail="Couldn't reach the football data service. Please try again later.")    # 502 = Bad Gateway
 
     if response.status_code == 200:                         # success — hand the data back
         return response.json()
