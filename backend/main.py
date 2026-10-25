@@ -36,8 +36,8 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
-from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team      # imports football API functions
-from backend.predict import get_prediction                  # imports the Claude prediction function
+from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team, get_cache      # football API functions + the dependency that provides Redis
+from backend.predict import get_prediction, get_claude_client   # the Claude prediction function + the dependency that provides the Claude client
 
 
 # lifespan — code that runs when the server STARTS (before yield) and STOPS (after yield)
@@ -112,15 +112,9 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
 # FOOTBALL API ENDPOINTS — live data from football-data.org
 # ─────────────────────────────────────────────
 
-# GET /football/matches — fetches REAL live match data from football-data.org
-# async because we are awaiting an external API call over the internet — takes time
-# competition is a query parameter with default "PL" (Premier League)
-# React can pass ?competition=BL1 for Bundesliga, ?competition=SA for Serie A etc.
-# FastAPI acts as middleman: React → FastAPI → football-data.org → FastAPI → React
-# API key stays on the server — never exposed to the browser
 @app.get("/football/matches")
-async def football_matches(competition: str = "PL"):
-    data = await get_matches(competition)                  # calls football.py which calls football-data.org
+async def football_matches(competition: str = "PL", cache=Depends(get_cache)):   # FastAPI hands us the Redis client
+    data = await get_matches(cache, competition)           # calls football.py which calls football-data.org
     return data                                            # real live soccer data sent back to React as JSON
 
 
@@ -129,8 +123,8 @@ async def football_matches(competition: str = "PL"):
 # returns position, points, wins, losses, goal difference for every team
 # React can pass ?competition=BL1 for Bundesliga standings, ?competition=SA for Serie A etc.
 @app.get("/football/standings")
-async def football_standings(competition: str = "PL"):
-    data = await get_standings(competition)                # calls football.py which calls football-data.org
+async def football_standings(competition: str = "PL", cache=Depends(get_cache)):
+    data = await get_standings(cache, competition)         # calls football.py which calls football-data.org
     return data                                            # real live standings sent back to React as JSON
 
 
@@ -140,22 +134,17 @@ async def football_standings(competition: str = "PL"):
 # defaults to top 10 — football-data.org limits to 10 on the free tier
 # React can pass ?competition=BL1 for Bundesliga scorers, ?competition=SA for Serie A etc.
 @app.get("/football/scorers")
-async def football_topscorers(competition: str = "PL"):
-    data = await get_topscorers(competition)               # calls football.py which calls football-data.org
+async def football_topscorers(competition: str = "PL", cache=Depends(get_cache)):
+    data = await get_topscorers(cache, competition)        # calls football.py which calls football-data.org
     return data                                            # real live top scorers sent back to React as JSON
-@app.get("/football/scorers")
-async def football_topscorers(competition: str = "PL"):
-    data = await get_topscorers(competition)
-    return data
-
 
 
 # GET /football/live — fetches ALL matches currently live across all competitions
 # no competition filter — shows every live match happening right now
 # async because it awaits an external API call
 @app.get("/football/live")
-async def football_livematches():
-    data = await get_livematches()                          # calls football.py which calls football-data.org
+async def football_livematches(cache=Depends(get_cache)):
+    data = await get_livematches(cache)                     # calls football.py which calls football-data.org
     return data                                             # real live matches sent back to React as JSON
 
 
@@ -183,9 +172,10 @@ async def football_team(team_id: int):
 # receives match data from React, calls Claude API, returns prediction text
 # POST because we are sending data to the server — match details in the request body
 @app.post("/predict")
-async def predict_match(match_data: dict):
+async def predict_match(match_data: dict, claude=Depends(get_claude_client)):   # FastAPI calls get_claude_client() and hands us the client
     try:
         prediction = await get_prediction(
+            client=claude,                              # the Claude client FastAPI handed us
             home_team=match_data["home_team"],          # home team name
             away_team=match_data["away_team"],          # away team name
             competition=match_data["competition"],       # competition name

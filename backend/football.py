@@ -29,10 +29,17 @@ BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint pa
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')  # uses 'redis' in Docker, 'localhost' locally
 
-cache = redis.Redis(host=REDIS_HOST, port=6379, db=0) #storing the connection to redis to a variable called cache
+cache = redis.Redis(host=REDIS_HOST, port=6379, db=0) #storing the connection to redis to a variable called cache — doesn't connect until first used
 CACHE_TTL = 60  # cache data for 60 seconds
 
-def get_cached(key: str):
+
+# get_cache() — a dependency: FastAPI calls it and hands the Redis client to each football endpoint
+# tests can swap it for a fake (or a broken one) with app.dependency_overrides
+def get_cache():
+    return cache
+
+
+def get_cached(cache, key: str):
     # try to get data from Redis cache
     cached = cache.get(key)                    # look up the key in Redis
     if cached:
@@ -40,7 +47,7 @@ def get_cached(key: str):
     return None                                # not found — return None
 
 
-def set_cached(key: str, data, ttl: int = CACHE_TTL):
+def set_cached(cache, key: str, data, ttl: int = CACHE_TTL):
     # save data to Redis cache with TTL expiry
     cache.set(key, json.dumps(data), ex=ttl)
 
@@ -77,60 +84,62 @@ async def fetch_from_api(url: str, params: dict | None = None):
     raise HTTPException(status_code=502, detail="The football data service had a problem. Please try again later.")  # 502 = Bad Gateway
 
 
+# the 4 cached functions below receive `cache` from main.py (FastAPI's dependency) instead of using the global one directly
+
 # get_matches() — returns match data for a competition
 # async because network requests take time — await lets other requests run while waiting
 # competition="PL" is a default parameter — PL = Premier League. Pass "BL1" for Bundesliga etc.
-async def get_matches(competition="PL"):
+async def get_matches(cache, competition="PL"):
     cache_key = f"matches:{competition}"                  # unique cache key per competition
 
-    cached_data = get_cached(cache_key)                   # check Redis cache first
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
     if cached_data:
         return cached_data                                # cache hit — return immediately, no API call
 
     data = await fetch_from_api(f"{BASE_URL}/competitions/{competition}/matches")  # raises on errors — so only good data reaches the next line
-    set_cached(cache_key, data)                           # save to Redis — next request gets cached version
+    set_cached(cache, cache_key, data)                    # save to Redis — next request gets cached version
     return data                                           # return full response — football.ts extracts what it needs
 
 
 # get_standings() — returns league standings for a competition
 # cache key is standings:{competition} — unique per competition e.g. standings:PL, standings:BL1
-async def get_standings(competition="PL"):
+async def get_standings(cache, competition="PL"):
     cache_key = f"standings:{competition}"                # unique cache key per competition
 
-    cached_data = get_cached(cache_key)                   # check Redis cache first
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
     if cached_data:
         return cached_data                                # cache hit — return immediately, no API call
 
     data = await fetch_from_api(f"{BASE_URL}/competitions/{competition}/standings")
-    set_cached(cache_key, data)
+    set_cached(cache, cache_key, data)
     return data
 
 
 # get_topscorers() — returns top scorers for a competition
 # defaults to top 10 scorers — football-data.org limits to 10 on the free tier
-async def get_topscorers(competition="PL"):
+async def get_topscorers(cache, competition="PL"):
     cache_key = f"scorers:{competition}"                  # unique cache key — scorers:PL, scorers:BL1 etc.
 
-    cached_data = get_cached(cache_key)                   # check Redis cache first
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
     if cached_data:
         return cached_data                                # cache hit — return immediately, no API call
 
     data = await fetch_from_api(f"{BASE_URL}/competitions/{competition}/scorers")
-    set_cached(cache_key, data)
+    set_cached(cache, cache_key, data)
     return data
 
 
 # get_livematches() — returns all matches currently live across ALL competitions
 # uses params to pass ?status=LIVE as a query filter — cleaner than putting it in the URL
-async def get_livematches():
+async def get_livematches(cache):
     cache_key = "live:matches"                            # one key — live matches aren't per competition
 
-    cached_data = get_cached(cache_key)                   # check Redis cache first
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
     if cached_data:
         return cached_data                                # cache hit — return immediately, no API call
 
     data = await fetch_from_api(f"{BASE_URL}/matches", params={"status": "LIVE"})
-    set_cached(cache_key, data, ttl=30)                   # live data goes stale fast — only cache 30 seconds
+    set_cached(cache, cache_key, data, ttl=30)            # live data goes stale fast — only cache 30 seconds
     return data
 
 
