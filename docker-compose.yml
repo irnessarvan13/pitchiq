@@ -14,6 +14,11 @@ services:
       - "5433:5432"                      # host:container port mapping
     volumes:
       - postgres_data:/var/lib/postgresql/data  # persist data between restarts
+    healthcheck:                         # Docker asks Postgres every 5 seconds: "are you ready for connections?"
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pitchiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10                        # after 10 failed checks in a row, Docker marks it "unhealthy"
 
   # Redis cache
   redis:
@@ -33,9 +38,12 @@ services:
       FOOTBALL_API_KEY: ${FOOTBALL_API_KEY}      # reads from .env file
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}    # reads from .env file
       REDIS_HOST: redis                          # tells backend to connect to redis container not localhost
+    restart: unless-stopped              # if the backend crashes, Docker starts it again automatically
     depends_on:
-      - db                               # wait for database to start first
-      - redis                            # wait for redis to start first
+      db:
+        condition: service_healthy       # wait until Postgres is READY (healthcheck passes), not just started
+      redis:
+        condition: service_started       # Redis is quick — just wait for it to start
     volumes:
       - .:/app                           # mount code so changes reflect immediately
 
@@ -57,3 +65,4 @@ services:
 # named volume for PostgreSQL data persistence
 volumes:
   postgres_data:
+  
