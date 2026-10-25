@@ -16,7 +16,10 @@ It checks the status code BEFORE anything gets cached:
 import httpx                              # makes HTTP requests from Python — like axios but for backend
 import os                                 # reads environment variables
 import redis
+from redis.backoff import NoBackoff       # "wait 0 seconds between retries"
+from redis.retry import Retry             # controls how many times redis-py retries a failed command
 import json        #json to serialize Python dictionaries to strings for Redis storage and deserialize them back when reading from cache
+import logging     # writes warnings to the server logs — so we know when something goes wrong
 
 from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
 from fastapi import HTTPException         # lets us send React a proper error status (503, 403, 404, 502)
@@ -24,12 +27,24 @@ from fastapi import HTTPException         # lets us send React a proper error st
 
 load_dotenv()                             # actually reads the .env file — must be called before os.getenv()
 
+logger = logging.getLogger(__name__)      # a logger named after this file ("backend.football") — shows up in the server logs
+
 API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key from .env — keeps it off GitHub and out of code
 BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')  # uses 'redis' in Docker, 'localhost' locally
 
-cache = redis.Redis(host=REDIS_HOST, port=6379, db=0) #storing the connection to redis to a variable called cache — doesn't connect until first used
+# make_redis_client() — builds a Redis client that gives up FAST when Redis is down
+def make_redis_client(host: str, port: int = 6379):
+    return redis.Redis(
+        host=host, port=port, db=0,
+        socket_connect_timeout=1,         # if Redis doesn't answer within 1 second, give up
+        socket_timeout=1,
+        retry=Retry(NoBackoff(), 0),      # don't retry — by default redis-py retries 3 times with waits, which made every request take ~7 seconds while Redis was down
+    )
+
+
+cache = make_redis_client(REDIS_HOST)     # the one Redis client the app uses — doesn't connect until first used
 CACHE_TTL = 60  # cache data for 60 seconds
 
 
@@ -39,9 +54,15 @@ def get_cache():
     return cache
 
 
+# Redis is only here to make things faster — so if it's down, we FAIL OPEN:
+# skip the cache, log a warning, and keep going. The data still comes from football-data.org.
 def get_cached(cache, key: str):
     # try to get data from Redis cache
-    cached = cache.get(key)                    # look up the key in Redis
+    try:
+        cached = cache.get(key)                # look up the key in Redis
+    except redis.RedisError as error:          # Redis is down or not answering
+        logger.warning("Redis unavailable, skipping cache read for %s: %s", key, error)
+        return None                            # act like a cache miss — the caller will call the API
     if cached:
         return json.loads(cached)              # found — convert string back to dict and return
     return None                                # not found — return None
@@ -49,7 +70,10 @@ def get_cached(cache, key: str):
 
 def set_cached(cache, key: str, data, ttl: int = CACHE_TTL):
     # save data to Redis cache with TTL expiry
-    cache.set(key, json.dumps(data), ex=ttl)
+    try:
+        cache.set(key, json.dumps(data), ex=ttl)
+    except redis.RedisError as error:          # Redis is down — we just don't cache this time
+        logger.warning("Redis unavailable, skipping cache write for %s: %s", key, error)
 
 
 # fetch_from_api() — the ONE place that talks to football-data.org
