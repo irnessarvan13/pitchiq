@@ -1,8 +1,17 @@
 // setup.ts — runs before every test file (see setupFiles in vitest.config.ts)
 import '@testing-library/jest-dom/vitest'           // adds readable checks like expect(...).toBeInTheDocument()
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import { server, unanswered } from './server'
+
+// jsdom (the fake browser) has no IntersectionObserver, which Navbar uses to highlight the section on screen
+// this stand-in does nothing, so components that use it can still render in tests
+vi.stubGlobal('IntersectionObserver', class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return [] }
+})
 
 beforeAll(() => server.listen())                    // start the fake backend
 afterEach(() => {
@@ -14,3 +23,4 @@ afterEach(() => {
   }
 })
 afterAll(() => server.close())                      // stop the fake backend when all tests are done
+
