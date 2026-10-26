@@ -79,7 +79,7 @@ export async function getLiveMatches(): Promise<LiveMatch[]> {
 }
 
 // get standings — returns table, current matchday, and competition name
-export async function getStandings(competition: string = 'PL') {
+export async function getStandings(competition: string = 'PL'): Promise<{ table: StandingEntry[]; matchday: number; competition: string }> {
   const response = await axios.get(`${API_BASE}/football/standings`, {
     params: { competition }
   })
