@@ -59,9 +59,9 @@ jobs:
       - name: Install packages
         run: pip install -r requirements-dev.txt
 
-      # step 4 — run every test
+      # step 4 — run every test, and print which lines/branches no test ran
       - name: Run tests
-        run: pytest -v
+        run: pytest -v --cov=backend --cov-branch --cov-report=term-missing
 
   deploy:
     needs: test                                # wait for the test job, and skip deploy if it fails
