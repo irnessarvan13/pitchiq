@@ -17,7 +17,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")  # reads Claude API key from 
 # tests can swap it for a fake with app.dependency_overrides — so they never call the real Claude
 @lru_cache
 def get_claude_client():
-    return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)  # creates the Claude API client — same concept as redis.Redis() or create_engine()
+        return anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)  # the ASYNC Claude client — its calls can be awaited, so they don't block the server
 
 async def get_prediction(
     client,                   # the Claude client — handed in by main.py instead of created at the top of this file
@@ -57,8 +57,8 @@ Based on this data provide:
 
 Keep your analysis under 150 words. Be specific and insightful."""
 
-    # call Claude API — this is where the magic happens
-    message = client.messages.create(
+    # await = "start the Claude call, and while we wait, let the server handle other requests"
+    message = await client.messages.create(
         model="claude-sonnet-4-6",        # use Claude Sonnet — smart and fast
         max_tokens=300,                    # limit response length — we don't need an essay
         messages=[
