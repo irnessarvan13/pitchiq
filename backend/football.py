@@ -29,7 +29,6 @@ load_dotenv()                             # actually reads the .env file — mus
 
 logger = logging.getLogger(__name__)      # a logger named after this file ("backend.football") — shows up in the server logs
 
-API_KEY = os.getenv("FOOTBALL_API_KEY")  # reads API key from .env — keeps it off GitHub and out of code
 BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')  # uses 'redis' in Docker, 'localhost' locally
@@ -82,7 +81,10 @@ def set_cached(cache, key: str, data, ttl: int = CACHE_TTL):
 #   - FastAPI stops right there and sends React that status code
 #   - the code after this call (set_cached) never runs, so the error is NEVER cached
 async def fetch_from_api(url: str, params: dict | None = None):
-    headers = {"X-Auth-Token": API_KEY}                     # API key goes in headers — X-Auth-Token is what football-data.org expects
+    api_key = os.getenv("FOOTBALL_API_KEY")                 # read the key on every request — the .env file keeps it off GitHub and out of code
+    if not api_key:                                         # key missing — don't even try (httpx would crash on a None header)
+        raise HTTPException(status_code=503, detail="Football data is not configured on this server yet.")
+    headers = {"X-Auth-Token": api_key}                     # API key goes in headers — X-Auth-Token is what football-data.org expects
 
     try:
         async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:   # async HTTP client — auto-closes when done, no memory leaks
