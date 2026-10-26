@@ -1,7 +1,7 @@
 # Fixtures for the unit tests in this folder only.
 # Unit tests swap the real services for fakes, so they need NO Docker: no Postgres, no Redis, no internet.
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis
 import pytest
@@ -27,6 +27,7 @@ def fake_cache():
 @pytest.fixture
 def fake_claude():
     fake = MagicMock()                                    # a pretend Claude client — it remembers how it was called
+    fake.messages.create = AsyncMock()                    # create() must be AWAITED — just like the real async Claude client
     fake.messages.create.return_value.content = [MagicMock(text="Arsenal win 2-1")]   # what the pretend Claude answers
     app.dependency_overrides[get_claude_client] = lambda: fake
     yield fake
