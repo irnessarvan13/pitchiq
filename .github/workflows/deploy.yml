@@ -1,7 +1,8 @@
 # deploy.yml — GitHub Actions CI/CD pipeline
 # runs on every pull request into main, and on every push to main
-# test job: runs pytest. deploy job: SSHs into AWS, pulls latest code, rebuilds Docker containers
-# deploy only runs after the tests pass, and only on pushes to main (never on pull requests)
+# test job: runs pytest (backend). frontend job: lint, type check, build and test the React app.
+# deploy job: SSHs into AWS, pulls latest code, rebuilds Docker containers
+# deploy only runs after BOTH test jobs pass, and only on pushes to main (never on pull requests)
 
 name: Test and Deploy PitchIQ
 
@@ -63,8 +64,45 @@ jobs:
       - name: Run tests
         run: pytest -v --cov=backend --cov-branch --cov-report=term-missing
 
+  frontend:
+    runs-on: ubuntu-latest        # a second fresh computer — runs at the same time as the backend tests
+
+    # every "run" step in this job happens inside the frontend/ folder (where package.json lives)
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      # step 1 — copy the code onto the empty computer
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # step 2 — install Node 24 (the test tools need Node 22.22+ or 24.15+)
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm                                        # remember downloaded packages between runs — faster installs
+          cache-dependency-path: frontend/package-lock.json
+
+      # step 3 — install EXACTLY the versions in package-lock.json (npm ci never changes the lock file)
+      - name: Install packages
+        run: npm ci
+
+      # step 4 — lint: catch sloppy code (oxlint)
+      - name: Lint
+        run: npm run lint
+
+      # step 5 — type check (tsc) and build the production version of the site
+      - name: Type check and build
+        run: npm run build
+
+      # step 6 — run every frontend test
+      - name: Run tests
+        run: npm test
+
   deploy:
-    needs: test                                # wait for the test job, and skip deploy if it fails
+    needs: [test, frontend]                    # wait for BOTH test jobs, and skip deploy if either fails
     if: github.event_name == 'push'            # only deploy on pushes to main, never on pull requests
     runs-on: ubuntu-latest        # GitHub runs this on their own Ubuntu server
 
