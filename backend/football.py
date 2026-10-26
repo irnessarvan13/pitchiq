@@ -176,13 +176,41 @@ async def get_livematches(cache):
     return data
 
 
+# match_cache_seconds() — how long to cache ONE match depends on its status
+def match_cache_seconds(status):
+    if status == "FINISHED":
+        return 24 * 60 * 60          # a finished match never changes — keep it for a whole day
+    if status in ("IN_PLAY", "PAUSED"):
+        return 30                    # live (or half-time) — the score can change any minute
+    return 5 * 60                    # scheduled, postponed, etc. — kickoff times rarely change, check every 5 minutes
+
+
+TEAM_CACHE_SECONDS = 12 * 60 * 60    # team info (name, crest, stadium, coach) barely changes — 12 hours
+
+
 # get_match_detail() — returns full details for one specific match
 # takes match_id as parameter — use the id field from any match object
-async def get_match_detail(match_id: int):
-    return await fetch_from_api(f"{BASE_URL}/matches/{match_id}")
+async def get_match_detail(cache, match_id: int):
+    cache_key = f"match:{match_id}"                       # unique cache key per match — match:560542
+
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
+    if cached_data:
+        return cached_data                                # cache hit — return immediately, no API call
+
+    data = await fetch_from_api(f"{BASE_URL}/matches/{match_id}")
+    set_cached(cache, cache_key, data, ttl=match_cache_seconds(data.get("status")))   # finished = 1 day, live = 30s, other = 5 min
+    return data
 
 
 # get_team() — returns full info for one specific team
 # takes team_id as parameter — use the id field from any team object
-async def get_team(team_id: int):
-    return await fetch_from_api(f"{BASE_URL}/teams/{team_id}")
+async def get_team(cache, team_id: int):
+    cache_key = f"team:{team_id}"                         # unique cache key per team — team:57
+
+    cached_data = get_cached(cache, cache_key)            # check Redis cache first
+    if cached_data:
+        return cached_data                                # cache hit — return immediately, no API call
+
+    data = await fetch_from_api(f"{BASE_URL}/teams/{team_id}")
+    set_cached(cache, cache_key, data, ttl=TEAM_CACHE_SECONDS)
+    return data
