@@ -2,7 +2,7 @@ import os
 
 # Point the app at the TEST database.
 # This line must run BEFORE the app is imported, so it goes at the very top.
-os.environ["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5433/pitchiq_test"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/pitchiq_test")
 os.environ["FOOTBALL_API_KEY"] = "test-football-key"      # fake keys — tests never use your real ones
 os.environ["ANTHROPIC_API_KEY"] = "test-anthropic-key"  
 
