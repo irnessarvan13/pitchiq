@@ -20,6 +20,8 @@ from redis.backoff import NoBackoff       # "wait 0 seconds between retries"
 from redis.retry import Retry             # controls how many times redis-py retries a failed command
 import json        #json to serialize Python dictionaries to strings for Redis storage and deserialize them back when reading from cache
 import logging     # writes warnings to the server logs — so we know when something goes wrong
+from typing import Literal, get_args      # Literal = "only these exact values are allowed"
+
 
 from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
 from fastapi import HTTPException         # lets us send React a proper error status (503, 403, 404, 502)
@@ -30,6 +32,25 @@ load_dotenv()                             # actually reads the .env file — mus
 logger = logging.getLogger(__name__)      # a logger named after this file ("backend.football") — shows up in the server logs
 
 BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
+
+
+# the ONE list of league codes PitchIQ supports — the 12 competitions on our football-data.org plan
+# FastAPI rejects anything else with a 422 before our code runs (codes are case-sensitive: "pl" is rejected)
+Competition = Literal[
+    "PL",    # Premier League
+    "ELC",   # Championship
+    "BL1",   # Bundesliga
+    "SA",    # Serie A
+    "PD",    # La Liga
+    "FL1",   # Ligue 1
+    "DED",   # Eredivisie
+    "PPL",   # Primeira Liga
+    "BSA",   # Brasileirão Série A
+    "CL",    # Champions League
+    "EC",    # European Championship
+    "WC",    # World Cup
+]
+SUPPORTED_COMPETITIONS = get_args(Competition)   # the same codes as a tuple — handy for loops and tests
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')  # uses 'redis' in Docker, 'localhost' locally
 
