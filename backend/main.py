@@ -40,7 +40,7 @@ from sqlalchemy.exc import OperationalError                  # the error SQLAlch
 from sqlalchemy.orm import Session                           # type hint for db parameter in endpoints — gives autocomplete
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
-from backend.schemas import MatchCreate, MatchResponse       # MatchCreate = validates IN | MatchResponse = formats OUT
+from backend.schemas import MatchCreate, MatchResponse, PredictRequest   # MatchCreate = validates IN | MatchResponse = formats OUT | PredictRequest = validates /predict
 from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team, get_cache      # football API functions + the dependency that provides Redis
 from backend.predict import get_prediction, get_claude_client   # the Claude prediction function + the dependency that provides the Claude client
 
@@ -200,21 +200,22 @@ async def football_team(team_id: int):
 # POST /predict — generates an AI match prediction using Claude
 # receives match data from React, calls Claude API, returns prediction text
 # POST because we are sending data to the server — match details in the request body
+# match_data: PredictRequest — FastAPI validates the body against PredictRequest; a bad body = 422 before this runs
 @app.post("/predict")
-async def predict_match(match_data: dict, claude=Depends(get_claude_client)):   # FastAPI calls get_claude_client() and hands us the client
+async def predict_match(match_data: PredictRequest, claude=Depends(get_claude_client)):   # FastAPI calls get_claude_client() and hands us the client
     try:
         prediction = await get_prediction(
             client=claude,                              # the Claude client FastAPI handed us
-            home_team=match_data["home_team"],          # home team name
-            away_team=match_data["away_team"],          # away team name
-            competition=match_data["competition"],       # competition name
-            home_position=match_data["home_position"],  # home team league position
-            away_position=match_data["away_position"],  # away team league position
-            home_points=match_data["home_points"],      # home team points
-            away_points=match_data["away_points"],      # away team points
-            home_gd=match_data["home_gd"],              # home team goal difference
-            away_gd=match_data["away_gd"],              # away team goal difference
-            matchday=match_data["matchday"]             # current matchday number
+            home_team=match_data.home_team,             # home team name
+            away_team=match_data.away_team,             # away team name
+            competition=match_data.competition,         # competition name
+            home_position=match_data.home_position,     # home team league position
+            away_position=match_data.away_position,     # away team league position
+            home_points=match_data.home_points,         # home team points
+            away_points=match_data.away_points,         # away team points
+            home_gd=match_data.home_gd,                 # home team goal difference
+            away_gd=match_data.away_gd,                 # away team goal difference
+            matchday=match_data.matchday                # current matchday number
         )
         return {"prediction": prediction}               # return prediction text to React
     except Exception as e:

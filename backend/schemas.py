@@ -18,7 +18,7 @@ Model vs Schema:
 - Schema (schemas.py) = how data looks coming IN and going OUT. Pydantic uses it.
 '''
 
-from pydantic import BaseModel    # BaseModel = foundation for all schemas — gives automatic validation
+from pydantic import BaseModel, Field    # BaseModel = foundation for all schemas — gives automatic validation | Field = extra rules like "must be 1 or more"
 from datetime import datetime      # needed as type hint for created_at field in MatchResponse
 from typing import Optional        # Optional = field can be missing or None — Pydantic won't reject it
 
@@ -44,3 +44,20 @@ class MatchResponse(BaseModel):
         from_attributes = True  # CRITICAL — tells Pydantic to read SQLAlchemy objects not just dicts
                                 # FastAPI gets SQLAlchemy objects from DB, not dicts
                                 # without this FastAPI crashes every time it sends DB data to React
+
+
+# PredictRequest — what React sends IN to /predict
+# FastAPI checks every request against this BEFORE our code runs:
+# a missing field, a wrong type, or an impossible value = automatic 422, and Claude is never called
+# Field(ge=1) means "greater than or equal to 1"
+class PredictRequest(BaseModel):
+    home_team: str                    # home team name
+    away_team: str                    # away team name
+    competition: str                  # competition name e.g. Premier League
+    home_position: int = Field(ge=1)  # league position — 1st or lower, never 0 or negative
+    away_position: int = Field(ge=1)
+    home_points: int = Field(ge=0)    # points can be 0, but never negative
+    away_points: int = Field(ge=0)
+    home_gd: int                      # goal difference CAN be negative — so no rule here
+    away_gd: int
+    matchday: int = Field(ge=1)       # there's no matchday 0
