@@ -186,8 +186,8 @@ async def football_livematches(cache=Depends(get_cache)):
 # match_id is a path parameter — FastAPI extracts it from the URL automatically
 # use the id field from any match object to get its full details
 @app.get("/football/matches/{match_id}")
-async def football_matchdetail(match_id: int):
-    data = await get_match_detail(match_id)                 # calls football.py with the match id
+async def football_matchdetail(match_id: int, cache=Depends(get_cache)):   # FastAPI hands us the Redis client
+    data = await get_match_detail(cache, match_id)          # calls football.py with the match id
     return data                                             # full match details sent back to React as JSON
 
 
@@ -195,8 +195,8 @@ async def football_matchdetail(match_id: int):
 # team_id is a path parameter — FastAPI extracts it from the URL automatically
 # use the id field from any team object to get its full squad and info
 @app.get("/football/teams/{team_id}")
-async def football_team(team_id: int):
-    data = await get_team(team_id)                          # calls football.py with the team id
+async def football_team(team_id: int, cache=Depends(get_cache)):   # FastAPI hands us the Redis client
+    data = await get_team(cache, team_id)                   # calls football.py with the team id
     return data                                             # full team info sent back to React as JSON
 
 
