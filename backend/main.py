@@ -43,7 +43,7 @@ from sqlalchemy.orm import Session                           # type hint for db 
 from backend.database import engine, Base, get_db           # engine + Base = create tables on startup | get_db = session dependency
 from backend.models import Match                             # imports Match so SQLAlchemy knows to create the matches table
 from backend.schemas import MatchCreate, MatchResponse, PredictRequest   # MatchCreate = validates IN | MatchResponse = formats OUT | PredictRequest = validates /predict
-from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team, get_cache      # football API functions + the dependency that provides Redis
+from backend.football import get_matches, get_standings, get_topscorers, get_livematches, get_match_detail, get_team, get_cache, Competition      # football API functions + the Redis dependency + the allowed league codes
 from backend.predict import get_prediction, get_claude_client   # the Claude prediction function + the dependency that provides the Claude client
 
 
@@ -143,11 +143,12 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
 # GET /football/matches — fetches REAL live match data from football-data.org
 # async because we are awaiting an external API call over the internet — takes time
 # competition is a query parameter with default "PL" (Premier League)
+# competition: Competition — only the codes in football.py's Competition list are allowed; anything else = 422 before this runs
 # React can pass ?competition=BL1 for Bundesliga, ?competition=SA for Serie A etc.
 # FastAPI acts as middleman: React → FastAPI → football-data.org → FastAPI → React
 # API key stays on the server — never exposed to the browser
 @app.get("/football/matches")
-async def football_matches(competition: str = "PL", cache=Depends(get_cache)):   # FastAPI hands us the Redis client
+async def football_matches(competition: Competition = "PL", cache=Depends(get_cache)):   # FastAPI hands us the Redis client
     data = await get_matches(cache, competition)           # calls football.py which calls football-data.org
     return data                                            # real live soccer data sent back to React as JSON
 
@@ -157,7 +158,7 @@ async def football_matches(competition: str = "PL", cache=Depends(get_cache)):  
 # returns position, points, wins, losses, goal difference for every team
 # React can pass ?competition=BL1 for Bundesliga standings, ?competition=SA for Serie A etc.
 @app.get("/football/standings")
-async def football_standings(competition: str = "PL", cache=Depends(get_cache)):
+async def football_standings(competition: Competition = "PL", cache=Depends(get_cache)):
     data = await get_standings(cache, competition)         # calls football.py which calls football-data.org
     return data                                            # real live standings sent back to React as JSON
 
@@ -168,7 +169,7 @@ async def football_standings(competition: str = "PL", cache=Depends(get_cache)):
 # defaults to top 10 — football-data.org limits to 10 on the free tier
 # React can pass ?competition=BL1 for Bundesliga scorers, ?competition=SA for Serie A etc.
 @app.get("/football/scorers")
-async def football_topscorers(competition: str = "PL", cache=Depends(get_cache)):
+async def football_topscorers(competition: Competition = "PL", cache=Depends(get_cache)):
     data = await get_topscorers(cache, competition)        # calls football.py which calls football-data.org
     return data                                            # real live top scorers sent back to React as JSON
 
@@ -206,7 +207,6 @@ async def football_team(team_id: int, cache=Depends(get_cache)):   # FastAPI han
 # receives match data from React, calls Claude API, returns prediction text
 # POST because we are sending data to the server — match details in the request body
 # match_data: PredictRequest — FastAPI validates the body against PredictRequest; a bad body = 422 before this runs
-# match_data: PredictRequest — FastAPI validates the body against PredictRequest; a bad body = 422 before this runs
 @app.post("/predict")
 async def predict_match(match_data: PredictRequest, claude=Depends(get_claude_client)):   # FastAPI calls get_claude_client() and hands us the client
     try:
@@ -230,4 +230,3 @@ async def predict_match(match_data: PredictRequest, claude=Depends(get_claude_cl
             detail="Predictions are unavailable right now. Please try again later.",   # a clean message — never Claude's raw error text
         )
     return {"prediction": prediction}                   # return prediction text to React
-
