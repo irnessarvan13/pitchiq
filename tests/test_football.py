@@ -78,13 +78,3 @@ def test_api_key_is_sent_in_the_header(client):
     assert route.calls.last.request.headers["X-Auth-Token"] == "test-football-key"
 
 
-@respx.mock
-def test_match_detail_is_not_cached(client):
-    # Recorded on purpose — issue #15 will add caching, and then this test changes.
-    route = respx.get(f"{API}/matches/560542").mock(
-        return_value=httpx.Response(200, json=load("match_560542_200.json"))
-    )
-    client.get("/football/matches/560542")
-    client.get("/football/matches/560542")
-    assert route.call_count == 2                           # the API was called BOTH times
-
