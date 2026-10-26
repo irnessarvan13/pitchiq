@@ -32,6 +32,7 @@ API key stays on the server — never exposed to the browser.
 '''
 
 import logging                                               # writes errors to the server logs
+import os                                                    # reads environment variables — used to check the API keys at startup
 import anthropic                                             # needed to recognize Claude's error types in /predict
 from contextlib import asynccontextmanager                    # lets us write the startup/shutdown "lifespan" function
 from fastapi import FastAPI, Depends, HTTPException          # FastAPI = app | Depends = inject db session | HTTPException = throw errors
@@ -58,8 +59,11 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)                # runs once when the server starts — creates tables if they don't exist
     except OperationalError as error:                        # Postgres is down — start anyway, football pages don't need it
         logger.error("Postgres unavailable at startup — /matches will return 503 until it's back: %s", error)
-    yield                                                    # the server runs while we're paused here
 
+    for name in ("FOOTBALL_API_KEY", "ANTHROPIC_API_KEY"):   # check every key ONCE at startup
+        if not os.getenv(name):                              # missing — warn with the NAME only, never a value
+            logger.warning("%s is not set — the features that need it will return 503 until it's added", name)
+    yield                                                    # the server runs while we're paused here
 
 app = FastAPI(lifespan=lifespan)                             # creates the single FastAPI app instance — everything attaches to this
 

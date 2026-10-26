@@ -4,20 +4,30 @@ take match data, build a smart prompt with standings context, call Claude, retur
 '''
 
 import anthropic                          # Claude API library
+import anthropic                          # Claude API library
 import os                                 # reads environment variables
 from functools import lru_cache           # remembers a function's result — so the client is only created once
 from dotenv import load_dotenv            # reads .env file so os.getenv() can find our API key
+from fastapi import HTTPException         # lets us send a clean 503 when the Claude key is missing
 
 load_dotenv()                             # actually reads the .env file — must be called before os.getenv()
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")  # reads Claude API key from .env 
+
+# make_claude_client() — builds the Claude client
+# @lru_cache = create the client the FIRST time it's asked for, then reuse that same one every time after
+@lru_cache
+def make_claude_client(api_key: str):
+    return anthropic.AsyncAnthropic(api_key=api_key)     # the ASYNC Claude client — its calls can be awaited, so they don't block the server
+
 
 # get_claude_client() — a dependency: FastAPI calls it and hands the client to /predict
-# @lru_cache = create the client the FIRST time it's asked for, then reuse that same one every time after
 # tests can swap it for a fake with app.dependency_overrides — so they never call the real Claude
-@lru_cache
 def get_claude_client():
-        return anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)  # the ASYNC Claude client — its calls can be awaited, so they don't block the server
+    api_key = os.getenv("ANTHROPIC_API_KEY")             # read the Claude key from .env
+    if not api_key:                                      # key missing — say so clearly instead of failing later with a confusing error
+        raise HTTPException(status_code=503, detail="Predictions are not configured on this server yet.")
+    return make_claude_client(api_key)                   # same key = the same client every time (thanks to @lru_cache)
+
 
 async def get_prediction(
     client,                   # the Claude client — handed in by main.py instead of created at the top of this file
