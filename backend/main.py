@@ -32,6 +32,7 @@ API key stays on the server — never exposed to the browser.
 '''
 
 import logging                                               # writes errors to the server logs
+import anthropic                                             # needed to recognize Claude's error types in /predict
 from contextlib import asynccontextmanager                    # lets us write the startup/shutdown "lifespan" function
 from fastapi import FastAPI, Depends, HTTPException          # FastAPI = app | Depends = inject db session | HTTPException = throw errors
 from fastapi.middleware.cors import CORSMiddleware           # allows React on port 3000 to talk to FastAPI on port 8000
@@ -201,6 +202,7 @@ async def football_team(team_id: int):
 # receives match data from React, calls Claude API, returns prediction text
 # POST because we are sending data to the server — match details in the request body
 # match_data: PredictRequest — FastAPI validates the body against PredictRequest; a bad body = 422 before this runs
+# match_data: PredictRequest — FastAPI validates the body against PredictRequest; a bad body = 422 before this runs
 @app.post("/predict")
 async def predict_match(match_data: PredictRequest, claude=Depends(get_claude_client)):   # FastAPI calls get_claude_client() and hands us the client
     try:
@@ -217,7 +219,11 @@ async def predict_match(match_data: PredictRequest, claude=Depends(get_claude_cl
             away_gd=match_data.away_gd,                 # away team goal difference
             matchday=match_data.matchday                # current matchday number
         )
-        return {"prediction": prediction}               # return prediction text to React
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))  # return error if something goes wrong
+    except anthropic.AnthropicError as error:             # ANY error from Claude: rate limit, overloaded, timeout, bad key...
+        logger.error("Claude request failed: %r", error)   # the real error goes to the server logs — for us, not for users
+        raise HTTPException(
+            status_code=503,                            # 503 = Service Unavailable — "try again later"
+            detail="Predictions are unavailable right now. Please try again later.",   # a clean message — never Claude's raw error text
+        )
+    return {"prediction": prediction}                   # return prediction text to React
 
