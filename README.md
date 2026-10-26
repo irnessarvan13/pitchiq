@@ -146,22 +146,48 @@ Visit `http://localhost:5173`
 ---
 ## Running Tests
 
+### Backend
+
 Tests use [pytest](https://docs.pytest.org/). Test-only tools live in `requirements-dev.txt`, separate from `requirements.txt`, so the production server never installs them.
 
 ```bash
 # 1. Install the app's packages plus the test tools (with your venv active)
 pip install -r requirements-dev.txt
 
-# 2. Start Postgres and Redis
-#    Needed for now: the backend connects to Postgres as soon as it loads.
-#    Issue #6 removes this step.
+# 2. Start Postgres and Redis (the integration tests use the real ones; tests/unit/ doesn't need them)
 docker compose up -d db redis
 
 # 3. Run every test from the project root
 pytest -v
+
+# Unit tests only: fakes instead of Postgres and Redis, no Docker needed
+pytest tests/unit -v
+
+# Coverage: which lines and branches no test ran
+pytest --cov=backend --cov-branch --cov-report=term-missing
 ```
 
-Tests live in `tests/`, and pytest's settings are in `pytest.ini`.
+Mutation testing ([mutmut](https://mutmut.readthedocs.io/)) checks how good the tests are by breaking `backend/football.py` on purpose. Run it inside Docker (mutmut crashes on macOS when it forks):
+
+```bash
+rm -rf mutants
+docker compose run --rm -e TEST_DATABASE_URL=postgresql://postgres:postgres@db:5432/pitchiq_test backend sh -c "pip install -q -r requirements-dev.txt && mutmut run && mutmut results"
+```
+
+Integration tests live in `tests/`, unit tests in `tests/unit/`. Settings: `pytest.ini` (pytest) and `setup.cfg` (mutmut).
+
+### Frontend
+
+Tests use [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) and [MSW](https://mswjs.io/) (a fake backend, so no FastAPI, Docker or internet needed). Requires Node 22.22+ or 24.15+.
+
+```bash
+cd frontend
+npm install          # first time only
+npm test             # run every test once
+npm run test:watch   # re-run the tests every time you save a file
+```
+
+Test files sit next to the component they test (`LiveMatches.test.tsx` next to `LiveMatches.tsx`). Shared setup lives in `src/test/`: `server.ts` is the fake backend, and `setup.ts` runs before every test file. A request the test didn't set up an answer for fails the test.
 
 ---
 
