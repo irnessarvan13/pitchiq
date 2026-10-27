@@ -69,7 +69,9 @@ function Standings({ competition }: StandingsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)                // true when the request FAILED (#42)
   const [attempt, setAttempt] = useState(0)                // goes up by 1 on every Try again — that re-runs the useEffect below
-  const [selectedTeams, setSelectedTeams] = useState<{home: StandingEntry, away: StandingEntry} | null>(null)
+  const [competitionName, setCompetitionName] = useState('')                  // the league's full name, e.g. "Premier League" — sent to Claude (#43)
+  const [homeTeam, setHomeTeam] = useState<StandingEntry | null>(null)        // the home team the user picked — null until they pick one
+  const [awayTeam, setAwayTeam] = useState<StandingEntry | null>(null)        // the away team the user picked — null until they pick one
 
   useEffect(() => {
     setLoading(true)
@@ -77,6 +79,9 @@ function Standings({ competition }: StandingsProps) {
       .then(data => {
         setStandings(data.table)
         setMatchday(data.matchday)
+        setCompetitionName(data.competition)           // e.g. "Premier League" — getStandings already returns it
+        setHomeTeam(null)                              // a new table means the old picks no longer apply (#43) —
+        setAwayTeam(null)                              // otherwise last league's teams could be sent with this league
         setError(false)                                // it worked — clear any error from an earlier try or league
         setLoading(false)
       })
@@ -181,17 +186,17 @@ function Standings({ competition }: StandingsProps) {
 
         {/* team selectors */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {/* each picker only sets ITS OWN team — nothing gets filled in automatically (#43) */}
+          {/* picking "Home team" again finds no match, so ?? null clears the pick */}
           <select
             className="team-select"
-            value={selectedTeams?.home.position ?? ''}
-            onChange={e => {
-              const team = standings.find(s => s.position === Number(e.target.value))
-              if (team) setSelectedTeams(prev => ({ home: team, away: prev?.away ?? standings[1] }))
-            }}
+            value={homeTeam?.position ?? ''}
+            onChange={e => setHomeTeam(standings.find(s => s.position === Number(e.target.value)) ?? null)}
           >
             <option value="">Home team</option>
             {standings.map(s => (
-              <option key={s.position} value={s.position}>{s.team.name}</option>
+              // disabled = the team already picked as away can't be picked here too — a team can't play itself
+              <option key={s.position} value={s.position} disabled={s.position === awayTeam?.position}>{s.team.name}</option>
             ))}
           </select>
 
@@ -199,31 +204,29 @@ function Standings({ competition }: StandingsProps) {
 
           <select
             className="team-select"
-            value={selectedTeams?.away.position ?? ''}
-            onChange={e => {
-              const team = standings.find(s => s.position === Number(e.target.value))
-              if (team) setSelectedTeams(prev => ({ home: prev?.home ?? standings[0], away: team }))
-            }}
+            value={awayTeam?.position ?? ''}
+            onChange={e => setAwayTeam(standings.find(s => s.position === Number(e.target.value)) ?? null)}
           >
             <option value="">Away team</option>
             {standings.map(s => (
-              <option key={s.position} value={s.position}>{s.team.name}</option>
+              // disabled = the team already picked as home can't be picked here too
+              <option key={s.position} value={s.position} disabled={s.position === homeTeam?.position}>{s.team.name}</option>
             ))}
           </select>
         </div>
 
-        {/* show prediction component when both teams selected */}
-        {selectedTeams?.home && selectedTeams?.away && (
+        {/* show prediction component only after the user picked BOTH teams themselves (#43) */}
+        {homeTeam && awayTeam && (
           <MatchPrediction
-            homeTeam={selectedTeams.home.team.name}
-            awayTeam={selectedTeams.away.team.name}
-            competition={competition}
-            homePosition={selectedTeams.home.position}
-            awayPosition={selectedTeams.away.position}
-            homePoints={selectedTeams.home.points}
-            awayPoints={selectedTeams.away.points}
-            homeGd={selectedTeams.home.goalDifference}
-            awayGd={selectedTeams.away.goalDifference}
+            homeTeam={homeTeam.team.name}
+            awayTeam={awayTeam.team.name}
+            competition={competitionName}
+            homePosition={homeTeam.position}
+            awayPosition={awayTeam.position}
+            homePoints={homeTeam.points}
+            awayPoints={awayTeam.points}
+            homeGd={homeTeam.goalDifference}
+            awayGd={awayTeam.goalDifference}
             matchday={matchday ?? 1}
           />
         )}
