@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
 import { standingsPL } from '../test/fixtures'
 import Standings from './Standings'
@@ -181,5 +181,68 @@ describe('Standings', () => {
     expect(await screen.findByText('Matchday 7')).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(21)                           // the full table is back
     expect(calls).toBe(2)
+  })
+
+  // #44: a prediction (or its error) belongs to ONE matchup — changing a team must clear it
+  it('changing a team clears the old prediction and brings the Predict button back', async () => {
+    answerWithPremierLeague()
+    server.use(http.post('/api/predict', () => HttpResponse.json({ prediction: 'Arsenal win 2-1' })))
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.click(screen.getByText('Predict this match'))
+    await screen.findByText('Arsenal win 2-1')
+
+    await userEvent.selectOptions(away, 'Liverpool FC')                           // now it's Arsenal vs Liverpool
+
+    expect(screen.queryByText('Arsenal win 2-1')).toBeNull()                     // the Chelsea prediction is gone
+    expect(screen.getByText('Predict this match')).toBeInTheDocument()           // ready to predict the new matchup
+  })
+
+  it('changing a team clears an old prediction error too', async () => {
+    answerWithPremierLeague()
+    server.use(http.post('/api/predict', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.click(screen.getByText('Predict this match'))
+    await screen.findByText('Failed to get prediction. Please try again.')
+
+    await userEvent.selectOptions(home, 'Liverpool FC')                           // now it's Liverpool vs Chelsea
+
+    expect(screen.queryByText('Failed to get prediction. Please try again.')).toBeNull()
+    expect(screen.getByText('Predict this match')).toBeInTheDocument()
+  })
+
+  it('a slow prediction for the old matchup never shows up after the teams change', async () => {
+    answerWithPremierLeague()
+    server.use(http.post('/api/predict', async () => {
+      await delay(100)                                                            // Claude takes 100 ms to answer...
+      return HttpResponse.json({ prediction: 'Arsenal win 2-1' })                 // ...and this answer is for Arsenal vs Chelsea
+    }))
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.click(screen.getByText('Predict this match'))
+    expect(screen.getByText('Claude is analyzing the match...')).toBeInTheDocument()
+
+    await userEvent.selectOptions(away, 'Liverpool FC')                           // change the matchup BEFORE the answer arrives
+    await new Promise(resolve => setTimeout(resolve, 300))                        // wait well past the 100 ms answer
+
+    expect(screen.queryByText('Arsenal win 2-1')).toBeNull()                     // it was ignored — wrong matchup
+    expect(screen.queryByText('Claude is analyzing the match...')).toBeNull()    // and the new matchup isn't stuck "analyzing"
+    expect(screen.getByText('Predict this match')).toBeInTheDocument()
   })
 })
