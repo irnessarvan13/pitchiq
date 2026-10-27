@@ -12,6 +12,7 @@ Props: receives competition from App.tsx — re-fetches when competition changes
 import { useState, useEffect } from 'react'
 import { getStandings } from '../api/football'
 import MatchPrediction from './MatchPrediction'        // AI prediction component
+import SectionError from './SectionError'              // the error message + Try again button (#42)
 
 interface StandingEntry {
   position: number
@@ -66,6 +67,8 @@ function Standings({ competition }: StandingsProps) {
   const [standings, setStandings] = useState<StandingEntry[]>([])
   const [matchday, setMatchday] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)                // true when the request FAILED (#42)
+  const [attempt, setAttempt] = useState(0)                // goes up by 1 on every Try again — that re-runs the useEffect below
   const [selectedTeams, setSelectedTeams] = useState<{home: StandingEntry, away: StandingEntry} | null>(null)
 
   useEffect(() => {
@@ -74,18 +77,33 @@ function Standings({ competition }: StandingsProps) {
       .then(data => {
         setStandings(data.table)
         setMatchday(data.matchday)
+        setError(false)                                // it worked — clear any error from an earlier try or league
         setLoading(false)
       })
       .catch(err => {
         console.error('Error fetching standings:', err)
+        setError(true)                                 // remember that it FAILED, so we show an error, not an empty table
         setLoading(false)
       })
-  }, [competition])
+  }, [competition, attempt])                           // re-runs when the league changes, or on Try again
+
+  // Try again — changing attempt re-runs the useEffect above
+  function retry() {
+    setAttempt(attempt + 1)
+  }
 
   if (loading) return (
     <div className="card">
       <h2>Standings</h2>
       <p className="loading">Loading standings...</p>
+    </div>
+  )
+
+  // the request failed — say so, instead of an empty table, legend and team pickers
+  if (error) return (
+    <div className="card">
+      <h2>Standings</h2>
+      <SectionError message="Couldn't load standings right now." onRetry={retry} />
     </div>
   )
 

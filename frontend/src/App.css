@@ -256,6 +256,19 @@
   padding: 24px 0;
 }
 
+
+/* a section whose request failed (#42) — red message, then the Try again button */
+.section-error {
+  color: var(--red);
+  font-size: 14px;
+  padding: 24px 0;
+}
+
+.section-error p {
+  margin: 0 0 12px;
+}
+
+
 /* hover effect on table rows */
 tbody tr:hover {
   background-color: var(--surface-2);
