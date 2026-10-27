@@ -1,6 +1,6 @@
-// Standings.test.tsx — characterization tests (#41): what Standings does TODAY
+// Standings.test.tsx — characterization tests (#41) + the error state (#42)
 import { describe, it, expect } from 'vitest'
-import { render, screen, within, waitForElementToBeRemoved } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
@@ -98,12 +98,31 @@ describe('Standings', () => {
     expect(away).toHaveDisplayValue('Arsenal FC')                                 // ...with whoever is 2nd in the table
   })
 
-  it('shows an empty table when the backend fails (BUG recorded on purpose — #42 will change this)', async () => {
-    server.use(http.get('/api/football/standings', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))
+  // #42: a failed request shows an error, not an empty table — checked for each error the backend can send
+  it.each([503, 502, 504])('shows an error and a Try again button instead of the table when the backend answers %i', async (status) => {
+    server.use(http.get('/api/football/standings', () => HttpResponse.json({ detail: 'failed' }, { status })))
 
     render(<Standings competition="PL" />)
 
-    await waitForElementToBeRemoved(() => screen.queryByText('Loading standings...'))
-    expect(screen.getAllByRole('row')).toHaveLength(1)                            // only the header row — and no message
+    expect(await screen.findByText("Couldn't load standings right now.")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByRole('table')).toBeNull()                                // no empty table
+    expect(screen.queryAllByRole('combobox')).toHaveLength(0)                     // and no empty team pickers
+  })
+
+  it('Try again fetches again and shows the table once the backend recovers', async () => {
+    let calls = 0
+    server.use(http.get('/api/football/standings', () => {
+      calls += 1
+      if (calls === 1) return HttpResponse.json({ detail: 'busy' }, { status: 503 })   // 1st request fails
+      return HttpResponse.json(standingsPL)                                            // 2nd request works
+    }))
+
+    render(<Standings competition="PL" />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Matchday 7')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(21)                           // the full table is back
+    expect(calls).toBe(2)
   })
 })
