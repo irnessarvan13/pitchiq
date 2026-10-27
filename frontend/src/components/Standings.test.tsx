@@ -86,7 +86,8 @@ describe('Standings', () => {
     expect(screen.getByText('Predict this match')).toBeInTheDocument()
   })
 
-  it('picking only a home team already shows the Predict button (BUG recorded on purpose — #43 will change this)', async () => {
+  // #43: the Predict button only appears after the user picked BOTH teams themselves
+  it('picking only a home team does not show the Predict button, and the away team stays empty', async () => {
     answerWithPremierLeague()
 
     render(<Standings competition="PL" />)
@@ -94,8 +95,64 @@ describe('Standings', () => {
     await screen.findByText('Matchday 7')
     const [home, away] = screen.getAllByRole('combobox')
     await userEvent.selectOptions(home, 'Liverpool FC')
-    expect(screen.getByText('Predict this match')).toBeInTheDocument()           // away was filled in by itself...
-    expect(away).toHaveDisplayValue('Arsenal FC')                                 // ...with whoever is 2nd in the table
+    expect(screen.queryByText('Predict this match')).toBeNull()                  // only one team picked → no button
+    expect(away).toHaveDisplayValue('Away team')                                  // nothing was filled in by itself
+  })
+
+  it('a team cannot play itself: the team picked on one side is disabled on the other side', async () => {
+    answerWithPremierLeague()
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    expect(within(away).getByRole('option', { name: 'Arsenal FC' })).toBeDisabled()   // Arsenal can't be picked as away now
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    expect(within(home).getByRole('option', { name: 'Chelsea FC' })).toBeDisabled()   // and Chelsea can't be picked as home
+  })
+
+  it('switching to another league clears both team pickers and hides the Predict button', async () => {
+    answerWithPremierLeague()
+
+    const { rerender } = render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Manchester City FC')
+    await userEvent.selectOptions(away, 'Arsenal FC')
+    expect(screen.getByText('Predict this match')).toBeInTheDocument()
+
+    rerender(<Standings competition="BL1" />)                                     // the user switches to the Bundesliga
+
+    await screen.findByText('Matchday 7')                                        // the new table has loaded
+    const [newHome, newAway] = screen.getAllByRole('combobox')                    // the table was rebuilt, so find the pickers again
+    expect(newHome).toHaveDisplayValue('Home team')                               // both pickers are back to empty
+    expect(newAway).toHaveDisplayValue('Away team')
+    expect(screen.queryByText('Predict this match')).toBeNull()                  // no way to send last league's teams
+  })
+
+  it('Predict sends the two picked teams and the league name (not its code) to /predict', async () => {
+    answerWithPremierLeague()
+    let sent: unknown = null
+    server.use(http.post('/api/predict', async ({ request }) => {
+      sent = await request.json()                                                 // capture exactly what the app sent
+      return HttpResponse.json({ prediction: 'Arsenal win 2-1' })
+    }))
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.click(screen.getByText('Predict this match'))
+    await screen.findByText('Arsenal win 2-1')
+    expect(sent).toEqual({
+      home_team: 'Arsenal FC', away_team: 'Chelsea FC', competition: 'Premier League',   // the name, not "PL"
+      home_position: 2, away_position: 4, home_points: 18, away_points: 13,
+      home_gd: 6, away_gd: 4, matchday: 7,                                        // real numbers from the #4 table
+    })
   })
 
   // #42: a failed request shows an error, not an empty table — checked for each error the backend can send

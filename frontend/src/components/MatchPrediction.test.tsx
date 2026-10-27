@@ -6,11 +6,11 @@ import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
 import MatchPrediction from './MatchPrediction'
 
-// the props Standings passes in for Arsenal (2nd) vs Chelsea (4th)
+// the props Standings passes in for Arsenal (2nd) vs Chelsea (4th) — since #43, competition is the league's name
 const ARSENAL_VS_CHELSEA = {
-  homeTeam: 'Arsenal FC', awayTeam: 'Chelsea FC', competition: 'PL',
+  homeTeam: 'Arsenal FC', awayTeam: 'Chelsea FC', competition: 'Premier League',
   homePosition: 2, awayPosition: 4, homePoints: 18, awayPoints: 13,
-  homeGd: 9, awayGd: 4, matchday: 7,
+  homeGd: 6, awayGd: 4, matchday: 7,
 }
 
 describe('MatchPrediction', () => {
@@ -29,7 +29,7 @@ describe('MatchPrediction', () => {
     expect(screen.queryByText('Predict this match')).toBeNull()                  // the button hides while a prediction shows
   })
 
-  it('sends the matchup to /predict (competition goes as the code "PL" — #43 will send the name)', async () => {
+  it('sends the matchup to /predict exactly as it was given', async () => {
     let sent: unknown = null
     server.use(http.post('/api/predict', async ({ request }) => {
       sent = await request.json()                                                 // remember exactly what the app sent
@@ -41,9 +41,9 @@ describe('MatchPrediction', () => {
     await userEvent.click(screen.getByText('Predict this match'))
     await screen.findByText('Arsenal win 2-1')
     expect(sent).toEqual({
-      home_team: 'Arsenal FC', away_team: 'Chelsea FC', competition: 'PL',
+      home_team: 'Arsenal FC', away_team: 'Chelsea FC', competition: 'Premier League',
       home_position: 2, away_position: 4, home_points: 18, away_points: 13,
-      home_gd: 9, away_gd: 4, matchday: 7,
+      home_gd: 6, away_gd: 4, matchday: 7,
     })
   })
 
