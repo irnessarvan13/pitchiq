@@ -1,6 +1,7 @@
-// TopScorers.test.tsx — characterization tests (#41): what TopScorers does TODAY
+// TopScorers.test.tsx — characterization tests (#41) + the error state (#42)
 import { describe, it, expect } from 'vitest'
-import { render, screen, within, waitForElementToBeRemoved } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
 import { scorersPL } from '../test/fixtures'
@@ -44,13 +45,46 @@ describe('TopScorers', () => {
     expect(askedFor).toBe('BL1')
   })
 
-  it('shows an empty table when the backend fails (BUG recorded on purpose — #42 will change this)', async () => {
-    server.use(http.get('/api/football/scorers', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))
+  // #42: a failed request shows an error, not an empty table — checked for each error the backend can send
+  it.each([503, 502, 504])('shows an error and a Try again button instead of the table when the backend answers %i', async (status) => {
+    server.use(http.get('/api/football/scorers', () => HttpResponse.json({ detail: 'failed' }, { status })))
 
     render(<TopScorers competition="PL" />)
 
-    await waitForElementToBeRemoved(() => screen.queryByText('Loading top scorers...'))   // wait until loading is over
-    expect(screen.getAllByRole('row')).toHaveLength(1)                            // only the header row — and no message
+    expect(await screen.findByText("Couldn't load top scorers right now.")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByRole('table')).toBeNull()                                // no empty table
+  })
+
+  it('Try again fetches again and shows the scorers once the backend recovers', async () => {
+    let calls = 0
+    server.use(http.get('/api/football/scorers', () => {
+      calls += 1
+      if (calls === 1) return HttpResponse.json({ detail: 'busy' }, { status: 503 })   // 1st request fails
+      return HttpResponse.json(scorersPL)                                              // 2nd request works
+    }))
+
+    render(<TopScorers competition="PL" />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(/Erling Haaland/)).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load top scorers right now.")).toBeNull()
+    expect(calls).toBe(2)
+  })
+
+  it('switching to another league after an error loads that league normally', async () => {
+    server.use(http.get('/api/football/scorers', ({ request }) => {
+      const competition = new URL(request.url).searchParams.get('competition')
+      if (competition === 'PL') return HttpResponse.json({ detail: 'busy' }, { status: 503 })   // the Premier League fails
+      return HttpResponse.json(scorersPL)                                                        // every other league works
+    }))
+
+    const { rerender } = render(<TopScorers competition="PL" />)
+    await screen.findByText("Couldn't load top scorers right now.")
+
+    rerender(<TopScorers competition="BL1" />)                                    // the user picks the Bundesliga
+
+    expect(await screen.findByText(/Erling Haaland/)).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load top scorers right now.")).toBeNull()   // the old error didn't stick around
   })
 })
-

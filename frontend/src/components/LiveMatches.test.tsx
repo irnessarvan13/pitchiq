@@ -1,6 +1,7 @@
-// LiveMatches.test.tsx — characterization tests (#41): what LiveMatches does TODAY
+// LiveMatches.test.tsx — characterization tests (#41) + the error state (#42)
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
 import { liveMatch } from '../test/fixtures'
@@ -45,14 +46,34 @@ describe('LiveMatches', () => {
     expect(await screen.findByText('0 - 0')).toBeInTheDocument()                  // "no score" shows as a fake 0 - 0
   })
 
-  it('says "No matches live right now." when the backend fails (BUG recorded on purpose — #42 will change this)', async () => {
+  // #42: a failed request must look different from "nothing live" — checked for each error the backend can send
+  it.each([503, 502, 504])('shows an error and a Try again button when the backend answers %i', async (status) => {
     server.use(
-      http.get('/api/football/live', () => HttpResponse.json({ detail: 'busy' }, { status: 503 }))
+      http.get('/api/football/live', () => HttpResponse.json({ detail: 'failed' }, { status }))
     )
 
     render(<LiveMatches />)
 
-    expect(await screen.findByText('No matches live right now.')).toBeInTheDocument()   // an error looks like "nothing live"
+    expect(await screen.findByText("Couldn't load live matches right now.")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByText('No matches live right now.')).toBeNull()          // NOT the "nothing live" message
+  })
+
+  it('Try again fetches again and shows the matches once the backend recovers', async () => {
+    let calls = 0
+    server.use(
+      http.get('/api/football/live', () => {
+        calls += 1
+        if (calls === 1) return HttpResponse.json({ detail: 'busy' }, { status: 503 })                // 1st request fails
+        return HttpResponse.json({ matches: [liveMatch(1, 'Arsenal FC', 'Chelsea FC', 2, 1)] })       // 2nd request works
+      })
+    )
+
+    render(<LiveMatches />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Arsenal FC')).toBeInTheDocument()
+    expect(screen.queryByText("Couldn't load live matches right now.")).toBeNull()   // the error is gone
+    expect(calls).toBe(2)                                                         // exactly one extra request
   })
 })
-

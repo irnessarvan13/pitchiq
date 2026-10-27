@@ -1,6 +1,7 @@
-// ChampionsLeague.test.tsx — characterization tests (#41): what the Champions League page does TODAY
+// ChampionsLeague.test.tsx — characterization tests (#41) + each section failing on its own (#42)
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
@@ -68,13 +69,64 @@ describe('ChampionsLeague page', () => {
     expect(screen.queryByText('🔴 Live Now')).toBeNull()
   })
 
-  it('shows only an error when ONE of its 3 requests fails (BUG recorded on purpose — #42 will change this)', async () => {
+  // #42: each section succeeds or fails on its own — one failed request must not hide the others
+  it('when live matches fail, standings and top scorers still show, and only Live Now shows an error', async () => {
     answerAll([])
     server.use(http.get('/api/football/live', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))   // only live fails
 
     renderPage()
 
-    expect(await screen.findByText('Failed to load Champions League data. Please try again.')).toBeInTheDocument()
-    expect(screen.queryByText('League Stage Standings')).toBeNull()               // standings loaded fine, but aren't shown
+    expect(await screen.findByText("Couldn't load live matches right now.")).toBeInTheDocument()
+    expect(screen.getByText('Sunderland AFC')).toBeInTheDocument()               // standings loaded
+    expect(screen.getByText(/Erling Haaland/)).toBeInTheDocument()               // top scorers loaded
+    expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1) // only the failed section has a Try again
+  })
+
+  it('when standings fail, only the standings section shows an error', async () => {
+    answerAll([])
+    server.use(http.get('/api/football/standings', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))
+
+    renderPage()
+
+    expect(await screen.findByText("Couldn't load standings right now.")).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'UEFA Champions League' })).toBeInTheDocument()   // the page itself still shows
+    expect(screen.getByText(/Erling Haaland/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1)
+  })
+
+  it('when top scorers fail, only the top scorers section shows an error', async () => {
+    answerAll([])
+    server.use(http.get('/api/football/scorers', () => HttpResponse.json({ detail: 'busy' }, { status: 503 })))
+
+    renderPage()
+
+    expect(await screen.findByText("Couldn't load top scorers right now.")).toBeInTheDocument()
+    expect(screen.getByText('Sunderland AFC')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1)
+  })
+
+  it('Try again only re-fetches the section that failed', async () => {
+    let standingsCalls = 0
+    let liveCalls = 0
+    server.use(
+      http.get('/api/football/standings', () => {
+        standingsCalls += 1
+        return HttpResponse.json(standingsPL)
+      }),
+      http.get('/api/football/scorers', () => HttpResponse.json(scorersPL)),
+      http.get('/api/football/live', () => {
+        liveCalls += 1
+        if (liveCalls === 1) return HttpResponse.json({ detail: 'busy' }, { status: 503 })   // 1st live request fails
+        return HttpResponse.json({ matches: [liveMatch(1, 'Real Madrid CF', 'FC Bayern München', 1, 0, 'UEFA Champions League')] })
+      }),
+    )
+
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Real Madrid CF')).toBeInTheDocument()       // live is back
+    expect(screen.queryByText("Couldn't load live matches right now.")).toBeNull()
+    expect(liveCalls).toBe(2)
+    expect(standingsCalls).toBe(1)                                                // standings were NOT fetched again
   })
 })

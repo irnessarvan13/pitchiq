@@ -11,6 +11,7 @@ Props: receives competition from App.tsx — re-fetches when competition changes
 // useState = stores data | useEffect = fetches on load and when competition changes
 import { useState, useEffect } from 'react'
 import { getTopScorers } from '../api/football'     // import API function
+import SectionError from './SectionError'           // the error message + Try again button (#42)
 
 // defines the shape of one top scorer entry from football-data.org
 interface TopScorer {
@@ -81,28 +82,45 @@ function TopScorers({ competition }: TopScorersProps) {
 
   const [scorers, setScorers] = useState<TopScorer[]>([])  // scorers = data | starts as empty array
   const [loading, setLoading] = useState(true)              // true while fetching | false when done
+  const [error, setError] = useState(false)                 // true when the request FAILED (#42)
+  const [attempt, setAttempt] = useState(0)                 // goes up by 1 on every Try again — that re-runs the useEffect below
 
    // re-runs every time competition changes
-  // [competition] in dependency array = re-run when this value changes
+  // [competition, attempt] in dependency array = re-run when either value changes
   useEffect(() => {
     setLoading(true)                                // reset loading when competition changes
     getTopScorers(competition)                      // calls football.ts → FastAPI → football-data.org
       .then(data => {
         console.log('Nationalities:', data.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setScorers(data)                            // store scorers in state
+        setError(false)                             // it worked — clear any error from an earlier try or league
         setLoading(false)                           // hide loading message
       })
       .catch(err => {
         console.error('Error fetching top scorers:', err)
+        setError(true)                              // remember that it FAILED, so we show an error, not an empty table
         setLoading(false)                           // stop loading even on error
       })
-  }, [competition])                                 // re-runs whenever competition prop changes
+  }, [competition, attempt])                        // re-runs when the league changes, or on Try again
+
+  // Try again — changing attempt re-runs the useEffect above
+  function retry() {
+    setAttempt(attempt + 1)
+  }
 
   // early return — show loading message while fetching
   if (loading) return (
     <div className="card">
       <h2>Top Scorers</h2>
       <p className="loading">Loading top scorers...</p>
+    </div>
+  )
+
+  // early return — the request failed, so say so (instead of showing an empty table)
+  if (error) return (
+    <div className="card">
+      <h2>Top Scorers</h2>
+      <SectionError message="Couldn't load top scorers right now." onRetry={retry} />
     </div>
   )
 
@@ -137,8 +155,4 @@ function TopScorers({ competition }: TopScorersProps) {
 
 // export default makes TopScorers importable in App.tsx
 export default TopScorers
-
-
-
-
 
