@@ -218,6 +218,7 @@ function Standings({ competition }: StandingsProps) {
         {/* show prediction component only after the user picked BOTH teams themselves (#43) */}
         {homeTeam && awayTeam && (
           <MatchPrediction
+            key={`${homeTeam.team.name} vs ${awayTeam.team.name}`}   // a new matchup = a new key = a fresh MatchPrediction (#44
             homeTeam={homeTeam.team.name}
             awayTeam={awayTeam.team.name}
             competition={competitionName}

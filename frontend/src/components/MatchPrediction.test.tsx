@@ -74,16 +74,7 @@ describe('MatchPrediction', () => {
     expect(screen.queryByText('Arsenal win 2-1')).toBeNull()
     expect(screen.getByText('Predict this match')).toBeInTheDocument()
   })
-
-  it('keeps the old prediction after the teams change (BUG recorded on purpose — #44 will change this)', async () => {
-    server.use(http.post('/api/predict', () => HttpResponse.json({ prediction: 'Arsenal win 2-1' })))
-
-    const { rerender } = render(<MatchPrediction {...ARSENAL_VS_CHELSEA} />)
-
-    await userEvent.click(screen.getByText('Predict this match'))
-    await screen.findByText('Arsenal win 2-1')
-    rerender(<MatchPrediction {...ARSENAL_VS_CHELSEA} homeTeam="Liverpool FC" awayTeam="Everton FC" />)   // new matchup, same component
-    expect(screen.getByText('Arsenal win 2-1')).toBeInTheDocument()             // the Arsenal prediction is still there
-  })
+    // changing the matchup is tested in Standings.test.tsx (#44):
+  // Standings gives MatchPrediction a new key for every matchup, which starts it fresh
 })
 
