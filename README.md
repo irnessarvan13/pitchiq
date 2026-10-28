@@ -185,9 +185,32 @@ cd frontend
 npm install          # first time only
 npm test             # run every test once
 npm run test:watch   # re-run the tests every time you save a file
+npm run test:coverage   # run every test and print which lines and branches no test ran
 ```
 
 Test files sit next to the component they test (`LiveMatches.test.tsx` next to `LiveMatches.tsx`). Shared setup lives in `src/test/`: `server.ts` is the fake backend, and `setup.ts` runs before every test file. A request the test didn't set up an answer for fails the test.
+
+### End-to-end
+
+One [Playwright](https://playwright.dev/) test (`e2e/tests/dashboard.spec.ts`) opens the real app in a real browser: React → FastAPI → Redis and Postgres → a **fake** football-data.org (`e2e/fake_football_api.py`) that replays the recorded responses in `tests/fixtures/football/`. `docker-compose.e2e.yml` also gives the backend fake API keys, so the test never calls the real football API or Claude.
+
+```bash
+# 1. Stop your normal app first (the e2e app uses the same ports)
+docker compose down
+
+# 2. Start the e2e version of the app (its own containers and its own database)
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p pitchiq-e2e up -d --build
+
+# 3. Run the test (first time only: npm install && npx playwright install chromium)
+cd e2e
+npx playwright test
+cd ..
+
+# 4. Stop it again
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p pitchiq-e2e down
+```
+
+This is the **testing pyramid**: many fast unit and component tests at the bottom (pytest, Vitest), and very few slow whole-app tests at the top (this one).
 
 ---
 
@@ -222,14 +245,16 @@ Get your Anthropic API key at [console.anthropic.com](https://console.anthropic.
 
 GitHub Actions (`.github/workflows/deploy.yml`) tests every change before it goes live.
 
-**On every pull request into `main`:**
-1. Starts Postgres and Redis as service containers
-2. Installs the app and test tools on Python 3.12 (the same version as production)
-3. Runs `pytest`. Branch protection blocks merging if any test fails
+**On every pull request into `main`**, three jobs run at the same time:
+1. **test**: starts Postgres and Redis as service containers and runs `pytest` with coverage on Python 3.12 (the same version as production)
+2. **frontend**: lint, type check and build the React app, then run the Vitest tests with coverage
+3. **e2e**: starts the whole app in Docker (with a fake football API and fake keys) and runs the Playwright test
+
+Branch protection blocks merging if a required check fails.
 
 **On every push to `main`** (merging a PR):
-1. Runs the same tests
-2. Only if they pass: SSHes into the EC2 server, pulls the latest code and rebuilds the Docker containers. The site is briefly offline while the containers restart
+1. Runs the same three jobs
+2. Only if all of them pass: SSHes into the EC2 server, pulls the latest code and rebuilds the Docker containers. The site is briefly offline while the containers restart
 
 ---
 

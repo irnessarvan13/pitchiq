@@ -267,4 +267,79 @@ describe('Standings', () => {
     expect(screen.getByText('Matchday 8')).toBeInTheDocument()                   // still the Bundesliga...
     expect(screen.queryByText('Matchday 7')).toBeNull()                          // ...the old answer was ignored
   })
+
+  // #48 (found by coverage): Ligue 1, La Liga and "any other league" had zone rules no test checked
+  it.each([
+    { league: 'Ligue 1', competition: 'FL1', zones: { 2: 'position-top4', 3: 'position-europa', 5: '', 17: 'position-playoff', 18: 'position-relegation' } },
+    { league: 'La Liga', competition: 'PD', zones: { 3: 'position-top4', 5: 'position-europa', 6: '', 17: 'position-relegation' } },
+    { league: 'any other league', competition: 'SA', zones: { 3: 'position-top4', 4: '', 16: '', 17: 'position-relegation' } },
+  ])('colors the $league zones', async ({ competition, zones }) => {
+    answerWithPremierLeague()                                                     // the same 20-team table, read with this league's rules
+
+    render(<Standings competition={competition} />)
+
+    await screen.findByText('Matchday 7')
+    const cells = positionCells()
+    for (const [row, zoneClass] of Object.entries(zones)) {
+      expect(cells[Number(row)].className).toBe(zoneClass)                        // row 0 = 1st place, row 19 = last
+    }
+  })
+
+  // #48 (found by coverage): the cleanup from #45 also covers an OLD request that FAILS late
+  it('a slow failure for the previous league never shows an error over the new league\'s table', async () => {
+    const bundesliga = { ...standingsPL, season: { ...standingsPL.season, currentMatchday: 8 } }
+    server.use(http.get('/api/football/standings', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('competition') === 'PL') {
+        await delay(300)
+        return HttpResponse.json({ detail: 'busy' }, { status: 503 })            // the old league's request fails — late
+      }
+      return HttpResponse.json(bundesliga)
+    }))
+
+    const { rerender } = render(<Standings competition="PL" />)
+    rerender(<Standings competition="BL1" />)
+
+    expect(await screen.findByText('Matchday 8')).toBeInTheDocument()
+    await new Promise(resolve => setTimeout(resolve, 500))                        // wait until the old failure has arrived
+
+    expect(screen.getByText('Matchday 8')).toBeInTheDocument()                   // the new table is still there...
+    expect(screen.queryByText("Couldn't load standings right now.")).toBeNull()  // ...and no error for an old request
+  })
+
+  // #48 (found by coverage): picking the "Home team" / "Away team" placeholder again had no test
+  it.each(['Home team', 'Away team'])('picking "%s" again clears that pick and hides the Predict button', async (placeholder) => {
+    answerWithPremierLeague()
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByText('Matchday 7')
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.selectOptions(placeholder === 'Home team' ? home : away, placeholder)   // back to the empty choice
+
+    expect(screen.queryByText('Predict this match')).toBeNull()                  // only one team picked now → no button
+  })
+
+  // #48 (found by coverage): football-data.org can leave currentMatchday empty (null), e.g. before a season starts
+  it('with no current matchday, hides "Matchday" and sends matchday 1 to /predict', async () => {
+    const noMatchday = { ...standingsPL, season: { ...standingsPL.season, currentMatchday: null } }
+    server.use(http.get('/api/football/standings', () => HttpResponse.json(noMatchday)))
+    let sent: { matchday?: number } = {}
+    server.use(http.post('/api/predict', async ({ request }) => {
+      sent = await request.json() as { matchday?: number }
+      return HttpResponse.json({ prediction: 'Arsenal win 2-1' })
+    }))
+
+    render(<Standings competition="PL" />)
+
+    await screen.findByRole('table')                                              // wait for the table to load
+    expect(screen.queryByText(/Matchday/)).toBeNull()                            // no "Matchday null" in the header
+    const [home, away] = screen.getAllByRole('combobox')
+    await userEvent.selectOptions(home, 'Arsenal FC')
+    await userEvent.selectOptions(away, 'Chelsea FC')
+    await userEvent.click(screen.getByText('Predict this match'))
+    await screen.findByText('Arsenal win 2-1')
+    expect(sent.matchday).toBe(1)                                                // 1 is the smallest matchday the backend accepts
+  })
 })
