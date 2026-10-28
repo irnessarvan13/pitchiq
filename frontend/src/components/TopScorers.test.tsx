@@ -109,4 +109,24 @@ describe('TopScorers', () => {
 
     expect(screen.queryByText(/Erling Haaland/)).toBeNull()                      // the old answer was ignored
   })
+
+  // #48 (found by coverage): the cleanup from #45 also covers an OLD request that FAILS late
+  it('a slow failure for the previous league never shows an error over the new league\'s scorers', async () => {
+    server.use(http.get('/api/football/scorers', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('competition') === 'PL') {
+        await delay(300)
+        return HttpResponse.json({ detail: 'busy' }, { status: 503 })            // the old league's request fails — late
+      }
+      return HttpResponse.json(scorersPL)
+    }))
+
+    const { rerender } = render(<TopScorers competition="PL" />)
+    rerender(<TopScorers competition="BL1" />)
+
+    expect(await screen.findByText(/Erling Haaland/)).toBeInTheDocument()
+    await new Promise(resolve => setTimeout(resolve, 500))                        // wait until the old failure has arrived
+
+    expect(screen.getByText(/Erling Haaland/)).toBeInTheDocument()               // the new list is still there...
+    expect(screen.queryByText("Couldn't load top scorers right now.")).toBeNull()   // ...and no error for an old request
+  })
 })

@@ -10,17 +10,6 @@ Components import these with "import type { ... } from '../types'".
 
 // TypeScript uses these to catch errors and provide autocomplete
 
-// defines what a match from our local PostgreSQL database looks like
-export interface Match {
-  id: number                             // unique id auto-assigned by PostgreSQL
-  home_team: string                      // home team name
-  away_team: string                      // away team name
-  home_score: number                     // current home score
-  away_score: number                     // current away score
-  status: string                         // scheduled | live | finished
-  created_at: string                     // when the match was created
-}
-
 // defines what a live match from football-data.org looks like
 export interface LiveMatch {
   id: number                             // match id from football-data.org

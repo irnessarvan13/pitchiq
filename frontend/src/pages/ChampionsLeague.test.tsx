@@ -140,4 +140,26 @@ describe('ChampionsLeague page', () => {
     expect(liveCalls).toBe(2)
     expect(standingsCalls).toBe(1)                                                // standings were NOT fetched again
   })
+
+  // #48 (found by coverage): only the Live Now "Try again" had a test — standings and top scorers have their own
+  it.each([
+    { section: 'standings', url: '/api/football/standings', body: standingsPL, error: "Couldn't load standings right now.", shows: 'Sunderland AFC' },
+    { section: 'top scorers', url: '/api/football/scorers', body: scorersPL, error: "Couldn't load top scorers right now.", shows: 'Erling Haaland' },
+  ])('Try again on $section fetches that section again and shows it', async ({ url, body, error, shows }) => {
+    answerAll([])
+    let calls = 0
+    server.use(http.get(url, () => {
+      calls += 1
+      if (calls === 1) return HttpResponse.json({ detail: 'busy' }, { status: 503 })   // 1st request fails
+      return HttpResponse.json(body)                                                   // the 2nd one works
+    }))
+
+    renderPage()
+
+    await screen.findByText(error)
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(new RegExp(shows))).toBeInTheDocument()
+    expect(screen.queryByText(error)).toBeNull()
+    expect(calls).toBe(2)
+  })
 })
