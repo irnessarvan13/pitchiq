@@ -74,9 +74,11 @@ function Standings({ competition }: StandingsProps) {
   const [awayTeam, setAwayTeam] = useState<StandingEntry | null>(null)        // the away team the user picked — null until they pick one
 
   useEffect(() => {
+    let ignore = false                                 // becomes true when this request is out of date (#45)
     setLoading(true)
     getStandings(competition)
       .then(data => {
+        if (ignore) return                             // the league changed while we waited — throw this old answer away
         setStandings(data.table)
         setMatchday(data.matchday)
         setCompetitionName(data.competition)           // e.g. "Premier League" — getStandings already returns it
@@ -86,10 +88,17 @@ function Standings({ competition }: StandingsProps) {
         setLoading(false)
       })
       .catch(err => {
+        if (ignore) return                             // an old request failing doesn't matter anymore either
         console.error('Error fetching standings:', err)
         setError(true)                                 // remember that it FAILED, so we show an error, not an empty table
         setLoading(false)
       })
+
+    // cleanup function — React runs this right BEFORE the effect runs again (league changed or Try again)
+    // and when the component is removed, so the request above knows it's out of date (#45)
+    return () => {
+      ignore = true
+    }
   }, [competition, attempt])                           // re-runs when the league changes, or on Try again
 
   // Try again — changing attempt re-runs the useEffect above
