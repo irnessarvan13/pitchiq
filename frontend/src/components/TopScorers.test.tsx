@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
 import { scorersPL } from '../test/fixtures'
 import TopScorers from './TopScorers'
@@ -86,5 +86,26 @@ describe('TopScorers', () => {
 
     expect(await screen.findByText(/Erling Haaland/)).toBeInTheDocument()
     expect(screen.queryByText("Couldn't load top scorers right now.")).toBeNull()   // the old error didn't stick around
+  })
+
+  // #45: a race condition — the OLD league's answer arrives AFTER the new one
+  it('a slow answer for the previous league never replaces the new league\'s scorers', async () => {
+    const bundesliga = { ...scorersPL, scorers: scorersPL.scorers.slice(1) }      // same list without Haaland, so we can tell them apart
+    server.use(http.get('/api/football/scorers', async ({ request }) => {
+      const competition = new URL(request.url).searchParams.get('competition')
+      if (competition === 'PL') {
+        await delay(300)                                                          // the Premier League answer is slow...
+        return HttpResponse.json(scorersPL)                                       // ...and has Haaland at the top
+      }
+      return HttpResponse.json(bundesliga)                                        // the Bundesliga answer is fast — no Haaland
+    }))
+
+    const { rerender } = render(<TopScorers competition="PL" />)                  // asks for the Premier League (slow)
+    rerender(<TopScorers competition="BL1" />)                                    // switch to the Bundesliga before it answers
+
+    expect(await screen.findByText(/João Pedro/)).toBeInTheDocument()            // the Bundesliga list arrives first
+    await new Promise(resolve => setTimeout(resolve, 500))                        // wait until the slow Premier League answer has arrived too
+
+    expect(screen.queryByText(/Erling Haaland/)).toBeNull()                      // the old answer was ignored
   })
 })
