@@ -53,7 +53,7 @@ function MatchPrediction({
         matchday
       })
       setPrediction(result)                            // store Claude's prediction
-    } catch (err) {
+    } catch {
       setError('Failed to get prediction. Please try again.')
     } finally {
       setLoading(false)                                // hide loading state

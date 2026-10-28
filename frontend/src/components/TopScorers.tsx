@@ -13,14 +13,8 @@ import { useState, useEffect } from 'react'
 import { getTopScorers } from '../api/football'     // import API function
 import SectionError from './SectionError'           // the error message + Try again button (#42)
 import Flag from './Flag'                           // the player's flag image (#46)
+import type { TopScorer } from '../types'           // the shape of one scorer — shared, see types.ts (#47)
 
-// defines the shape of one top scorer entry from football-data.org
-interface TopScorer {
-  player: { name: string; nationality: string }     // player name and nationality
-  team: { name: string }                            // team the player plays for
-  goals: number                                     // total goals scored
-  assists: number | null                            // assists — can be null if not tracked
-}
 
 // defines what props this component accepts from App.tsx
 interface TopScorersProps {
@@ -44,7 +38,6 @@ function TopScorers({ competition }: TopScorersProps) {
     getTopScorers(competition)                      // calls football.ts → FastAPI → football-data.org
       .then(data => {
         if (ignore) return                          // the league changed while we waited — throw this old answer away
-        console.log('Nationalities:', data.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setScorers(data)                            // store scorers in state
         setError(false)                             // it worked — clear any error from an earlier try or league
         setLoading(false)                           // hide loading message

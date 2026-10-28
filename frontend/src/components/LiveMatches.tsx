@@ -8,19 +8,8 @@ Follows the same pattern as Standings: useState → useEffect → render
 import { useState, useEffect } from 'react'          // useState = stores data | useEffect = fetches on load
 import { getLiveMatches } from '../api/football'      // import API function — ../ goes up to src then into api/football
 import SectionError from './SectionError'             // the error message + Try again button (#42)
+import type { LiveMatch } from '../types'             // the shape of one live match — shared, see types.ts (#47)
 
-// defines the shape of one live match from football-data.org
-interface LiveMatch {
-  id: number                                          // unique match id
-  homeTeam: { name: string; crest: string }          // home team name and badge image URL
-  awayTeam: { name: string; crest: string }          // away team name and badge image URL
-  score: {
-    fullTime: { home: number | null; away: number | null }  // number | null — null before match starts
-  }
-  status: string                                      // IN_PLAY | PAUSED | FINISHED
-  competition: { name: string }                       // which competition this match belongs to
-  utcDate: string                                     // match date and time in UTC
-}
 
 function LiveMatches() {
   const [matches, setMatches] = useState<LiveMatch[]>([])  // matches = data | starts as empty array
@@ -66,13 +55,6 @@ function LiveMatches() {
   )
 
   if (matches.length === 0) return (
-    <div className="card">
-      <h2>Live Matches</h2>
-      <p className="no-data">No matches live right now.</p>
-    </div>
-  )
-
-    if (matches.length === 0) return (
     <div className="card">
       <h2>Live Matches</h2>
       <p className="no-data">No matches live right now.</p>
