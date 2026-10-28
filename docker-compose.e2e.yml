@@ -1,0 +1,27 @@
+# docker-compose.e2e.yml — extra settings for the end-to-end test (#48), layered ON TOP of docker-compose.yml
+#
+# run with:
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p pitchiq-e2e up -d --build
+#
+# Two changes from the normal app:
+#   1. a fake football-data.org (e2e/fake_football_api.py) that replays our recorded responses
+#   2. the backend talks to that fake API and gets fake keys, so the e2e test can never call
+#      the real football API or Claude — even if your real keys are in .env
+# -p pitchiq-e2e gives it its own containers and its own (empty) database, separate from your normal app.
+
+services:
+  fake-football-api:
+    image: python:3.12-slim                                # same Python as the backend; the script needs nothing else
+    command: python /e2e/fake_football_api.py
+    volumes:
+      - ./e2e/fake_football_api.py:/e2e/fake_football_api.py:ro    # :ro = read-only
+      - ./tests/fixtures/football:/fixtures:ro                       # the recorded responses it replays
+
+  backend:
+    environment:
+      FOOTBALL_API_BASE_URL: http://fake-football-api:8080/v4       # the fake API instead of api.football-data.org
+      FOOTBALL_API_KEY: e2e-fake-key                                 # never the real keys
+      ANTHROPIC_API_KEY: e2e-fake-key
+    depends_on:
+      fake-football-api:
+        condition: service_started

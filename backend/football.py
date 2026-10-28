@@ -32,7 +32,9 @@ load_dotenv()                             # actually reads the .env file — mus
 
 logger = logging.getLogger(__name__)      # a logger named after this file ("backend.football") — shows up in the server logs
 
-BASE_URL = "https://api.football-data.org/v4"  # base URL — we add endpoint paths on top: /competitions/PL/matches
+# base URL — we add endpoint paths on top: /competitions/PL/matches
+# normally the real football-data.org; the end-to-end test points it at a fake one that replays recorded responses (#48)
+BASE_URL = os.getenv("FOOTBALL_API_BASE_URL", "https://api.football-data.org/v4")
 
 
 # the ONE list of league codes PitchIQ supports — the 12 competitions on our football-data.org plan

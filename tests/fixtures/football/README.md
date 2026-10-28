@@ -10,6 +10,8 @@ Tests replay these with a fake API (respx) so they never call the real API, neve
 | `standings_PL_200.json` | `/competitions/PL/standings` | 200 | |
 | `matches_PL_200.json` | `/competitions/PL/matches` | 200 | Trimmed to the first 5 matches (`resultSet.count` set to 5) |
 | `scorers_PL_200.json` | `/competitions/PL/scorers` | 200 | |
+| `standings_BL1_200.json` | `/competitions/BL1/standings` | 200 | Recorded Oct 28, 2026 for the end-to-end test (#48) |
+| `scorers_BL1_200.json` | `/competitions/BL1/scorers` | 200 | Recorded Oct 28, 2026 for the end-to-end test (#48) |
 | `live_empty_200.json` | `/matches?status=LIVE` | 200 | No live matches at the time: `"count": 0`, `"matches": []` |
 | `live_stale_200.json` | `/matches?status=LIVE` | 200 | **Rebuilt by hand for #29** from the Oct 24, 2026 production check (the real response can't be re-recorded). Santos FC vs EC Bahia: `IN_PLAY` almost 3 hours after kickoff, `lastUpdated` **before** kickoff, score `null`. The status, times and score are the real values; the ids and crests are placeholders. |
 | `match_560542_200.json` | `/matches/560542` | 200 | |

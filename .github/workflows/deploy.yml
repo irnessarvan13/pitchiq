@@ -1,8 +1,9 @@
 # deploy.yml — GitHub Actions CI/CD pipeline
 # runs on every pull request into main, and on every push to main
-# test job: runs pytest (backend). frontend job: lint, type check, build and test the React app.
+# test job: runs pytest (backend). frontend job: lint, type check, build and test the React app (with coverage).
+# e2e job: starts the whole app in Docker and drives it with a real browser (Playwright).
 # deploy job: SSHs into AWS, pulls latest code, rebuilds Docker containers
-# deploy only runs after BOTH test jobs pass, and only on pushes to main (never on pull requests)
+# deploy only runs after ALL test jobs pass, and only on pushes to main (never on pull requests)
 
 name: Test and Deploy PitchIQ
 
@@ -97,12 +98,58 @@ jobs:
       - name: Type check and build
         run: npm run build
 
-      # step 6 — run every frontend test
-      - name: Run tests
-        run: npm test
+      # step 6 — run every frontend test, and print which lines/branches no test ran (#48)
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+  e2e:
+    runs-on: ubuntu-latest        # a third fresh computer — the whole app, end to end (#48)
+
+    steps:
+      # step 1 — copy the code onto the empty computer
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # step 2 — start every container: Postgres, Redis, FastAPI, React, and the FAKE football-data.org
+      #          (docker-compose.e2e.yml gives the backend fake keys, so nothing can reach the real APIs)
+      - name: Start the app in Docker
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+
+      # step 3 — wait until the backend and the React app answer (they take a little while to start)
+      - name: Wait for the app
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8000/ > /dev/null && curl -sf http://localhost:5173/ > /dev/null && exit 0
+            sleep 2
+          done
+          echo "The app didn't start in 2 minutes"
+          exit 1
+
+      # step 4 — install Node and Playwright (with its Chromium browser)
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # step 5 — run the end-to-end test
+      - name: Run the end-to-end test
+        working-directory: e2e
+        run: npx playwright test
+
+      # if anything failed, print every container's logs so we can see why
+      - name: Show the app's logs
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml logs
 
   deploy:
-    needs: [test, frontend]                    # wait for BOTH test jobs, and skip deploy if either fails
+    needs: [test, frontend, e2e]               # wait for ALL test jobs, and skip deploy if any of them fails
     if: github.event_name == 'push'            # only deploy on pushes to main, never on pull requests
     runs-on: ubuntu-latest        # GitHub runs this on their own Ubuntu server
 
