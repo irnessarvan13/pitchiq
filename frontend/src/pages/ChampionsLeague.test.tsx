@@ -61,6 +61,16 @@ describe('ChampionsLeague page', () => {
     expect(screen.queryByText('Santos FC')).toBeNull()
   })
 
+  it('shows "–" instead of a fake "0 - 0" for a live UCL match with no score yet (#29)', async () => {
+    answerAll([liveMatch(1, 'Real Madrid CF', 'FC Bayern München', null, null, 'UEFA Champions League')])
+
+    renderPage()
+
+    expect(await screen.findByText('🔴 Live Now')).toBeInTheDocument()
+    expect(screen.getByText('–')).toBeInTheDocument()
+    expect(screen.queryByText('0 - 0')).toBeNull()
+  })
+
   it('hides "Live Now" when no Champions League match is live', async () => {
     answerAll([liveMatch(2, 'Santos FC', 'EC Bahia', 2, 2, 'Campeonato Brasileiro Série A')])
 
