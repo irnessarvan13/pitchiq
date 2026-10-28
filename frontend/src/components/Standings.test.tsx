@@ -245,4 +245,26 @@ describe('Standings', () => {
     expect(screen.queryByText('Claude is analyzing the match...')).toBeNull()    // and the new matchup isn't stuck "analyzing"
     expect(screen.getByText('Predict this match')).toBeInTheDocument()
   })
+
+  // #45: a race condition — the OLD league's answer arrives AFTER the new one
+  it('a slow answer for the previous league never replaces the new league\'s table', async () => {
+    const bundesliga = { ...standingsPL, season: { ...standingsPL.season, currentMatchday: 8 } }   // same table, but "Matchday 8" so we can tell them apart
+    server.use(http.get('/api/football/standings', async ({ request }) => {
+      const competition = new URL(request.url).searchParams.get('competition')
+      if (competition === 'PL') {
+        await delay(300)                                                          // the Premier League answer is slow...
+        return HttpResponse.json(standingsPL)                                     // ...and says "Matchday 7"
+      }
+      return HttpResponse.json(bundesliga)                                        // the Bundesliga answer is fast — "Matchday 8"
+    }))
+
+    const { rerender } = render(<Standings competition="PL" />)                   // asks for the Premier League (slow)
+    rerender(<Standings competition="BL1" />)                                     // switch to the Bundesliga before it answers
+
+    expect(await screen.findByText('Matchday 8')).toBeInTheDocument()           // the Bundesliga arrives first
+    await new Promise(resolve => setTimeout(resolve, 500))                        // wait until the slow Premier League answer has arrived too
+
+    expect(screen.getByText('Matchday 8')).toBeInTheDocument()                   // still the Bundesliga...
+    expect(screen.queryByText('Matchday 7')).toBeNull()                          // ...the old answer was ignored
+  })
 })

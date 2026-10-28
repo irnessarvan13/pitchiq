@@ -88,19 +88,28 @@ function TopScorers({ competition }: TopScorersProps) {
    // re-runs every time competition changes
   // [competition, attempt] in dependency array = re-run when either value changes
   useEffect(() => {
+    let ignore = false                              // becomes true when this request is out of date (#45)
     setLoading(true)                                // reset loading when competition changes
     getTopScorers(competition)                      // calls football.ts → FastAPI → football-data.org
       .then(data => {
+        if (ignore) return                          // the league changed while we waited — throw this old answer away
         console.log('Nationalities:', data.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setScorers(data)                            // store scorers in state
         setError(false)                             // it worked — clear any error from an earlier try or league
         setLoading(false)                           // hide loading message
       })
       .catch(err => {
+        if (ignore) return                          // an old request failing doesn't matter anymore either
         console.error('Error fetching top scorers:', err)
         setError(true)                              // remember that it FAILED, so we show an error, not an empty table
         setLoading(false)                           // stop loading even on error
       })
+
+    // cleanup function — React runs this right BEFORE the effect runs again (league changed or Try again)
+    // and when the component is removed, so the request above knows it's out of date (#45)
+    return () => {
+      ignore = true
+    }
   }, [competition, attempt])                        // re-runs when the league changes, or on Try again
 
   // Try again — changing attempt re-runs the useEffect above
