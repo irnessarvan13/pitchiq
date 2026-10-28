@@ -12,6 +12,7 @@ Props: receives competition from App.tsx — re-fetches when competition changes
 import { useState, useEffect } from 'react'
 import { getTopScorers } from '../api/football'     // import API function
 import SectionError from './SectionError'           // the error message + Try again button (#42)
+import Flag from './Flag'                           // the player's flag image (#46)
 
 // defines the shape of one top scorer entry from football-data.org
 interface TopScorer {
@@ -26,56 +27,6 @@ interface TopScorersProps {
   competition: string                               // competition code — 'PL', 'BL1', 'SA' etc.
 }
 
-// converts nationality name to flag emoji
-function getFlag(nationality: string): string {
-  const flags: Record<string, string> = {
-    'Norway': '🇳🇴',
-    'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'Portugal': '🇵🇹',
-    'Germany': '🇩🇪',
-    'France': '🇫🇷',
-    'Spain': '🇪🇸',
-    'Brazil': '🇧🇷',
-    'Argentina': '🇦🇷',
-    'Netherlands': '🇳🇱',
-    'Belgium': '🇧🇪',
-    'Italy': '🇮🇹',
-    'Denmark': '🇩🇰',
-    'Sweden': '🇸🇪',
-    'Croatia': '🇭🇷',
-    'Bosnia-Herzegovina': '🇧🇦',
-    'Poland': '🇵🇱',
-    'Senegal': '🇸🇳',
-    'Ghana': '🇬🇭',
-    'Nigeria': '🇳🇬',
-    'Ivory Coast': '🇨🇮',
-    'Morocco': '🇲🇦',
-    'Algeria': '🇩🇿',
-    'Egypt': '🇪🇬',
-    'Colombia': '🇨🇴',
-    'Uruguay': '🇺🇾',
-    'Mexico': '🇲🇽',
-    'Austria': '🇦🇹',
-    'Switzerland': '🇨🇭',
-    'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-    'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-    'Ireland': '🇮🇪',
-    'Czech Republic': '🇨🇿',
-    'Slovakia': '🇸🇰',
-    'Hungary': '🇭🇺',
-    'Greece': '🇬🇷',
-    'Turkey': '🇹🇷',
-    'Ukraine': '🇺🇦',
-    'Russia': '🇷🇺',
-    'Japan': '🇯🇵',
-    'South Korea': '🇰🇷',
-    'Australia': '🇦🇺',
-    'United States': '🇺🇸',
-    'Canada': '🇨🇦',
-    'Jamaica': '🇯🇲',
-  }
-  return flags[nationality] || '🌍'  // default globe if not found
-}
 
 // TopScorers component — receives competition as a prop from App.tsx
 function TopScorers({ competition }: TopScorersProps) {
@@ -150,7 +101,7 @@ function TopScorers({ competition }: TopScorersProps) {
           {scorers.map((scorer, index) => (
             <tr key={index}>
               <td style={{ fontFamily: 'var(--font-score)', fontSize: '16px', color: 'var(--ink)' }}>{index + 1}</td>
-              <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
+              <td><strong><Flag nationality={scorer.player.nationality} />{scorer.player.name}</strong></td>
               <td style={{ color: 'var(--ink-muted)' }}>{scorer.team.name}</td>
               <td><strong>{scorer.goals}</strong></td>
               <td>{scorer.assists ?? 'N/A'}</td>

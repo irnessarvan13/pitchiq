@@ -256,6 +256,13 @@
   padding: 24px 0;
 }
 
+/* a player's flag image next to their name (#46) */
+.flag {
+  vertical-align: middle;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
 
 /* a section whose request failed (#42) — red message, then the Try again button */
 .section-error {

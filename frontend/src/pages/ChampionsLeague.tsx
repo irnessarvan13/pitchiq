@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'          // for navigation back to dashboard
 import { getStandings, getTopScorers, getLiveMatches } from '../api/football'
 import SectionError from '../components/SectionError'   // the error message + Try again button (#42)
+import Flag from '../components/Flag'                   // the player's flag image (#46)
 
 // UCL competition code
 const UCL = 'CL'
@@ -55,36 +56,7 @@ interface LiveMatch {
   utcDate: string
 }
 
-// converts nationality to flag emoji — same as TopScorers.tsx
-function getFlag(nationality: string): string {
-  const flags: Record<string, string> = {
-    'Norway': '🇳🇴', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹',
-    'Germany': '🇩🇪', 'France': '🇫🇷', 'Spain': '🇪🇸',
-    'Brazil': '🇧🇷', 'Argentina': '🇦🇷', 'Netherlands': '🇳🇱',
-    'Belgium': '🇧🇪', 'Italy': '🇮🇹', 'Denmark': '🇩🇰',
-    'Sweden': '🇸🇪', 'Croatia': '🇭🇷', 'Bosnia-Herzegovina': '🇧🇦',
-    'Poland': '🇵🇱', 'Senegal': '🇸🇳', 'Ghana': '🇬🇭',
-    'Nigeria': '🇳🇬', 'Morocco': '🇲🇦', 'Colombia': '🇨🇴',
-    'Uruguay': '🇺🇾', 'Austria': '🇦🇹', 'Switzerland': '🇨🇭',
-    'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Ireland': '🇮🇪',
-    'Czech Republic': '🇨🇿', 'Slovakia': '🇸🇰', 'Turkey': '🇹🇷',
-    'Ukraine': '🇺🇦', 'Japan': '🇯🇵', 'South Korea': '🇰🇷',
-    'Bosnia and Herzegovina': '🇧🇦', 'Slovenia': '🇸🇮', 'Finland': '🇫🇮',
-    'Romania': '🇷🇴', 'Bulgaria': '🇧🇬', 'Albania': '🇦🇱',
-    'Kosovo': '🇽🇰', 'North Macedonia': '🇲🇰', 'Montenegro': '🇲🇪',
-    'Serbia': '🇷🇸', 'Ecuador': '🇪🇨', 'Peru': '🇵🇪',
-    'Chile': '🇨🇱', 'Venezuela': '🇻🇪', 'Paraguay': '🇵🇾',
-    'Bolivia': '🇧🇴', 'Costa Rica': '🇨🇷', 'Panama': '🇵🇦',
-    'Honduras': '🇭🇳', 'Cameroon': '🇨🇲', 'Mali': '🇲🇱',
-    'Guinea': '🇬🇳', 'Tunisia': '🇹🇳', 'South Africa': '🇿🇦',
-    'DR Congo': '🇨🇩', 'Ivory Coast': '🇨🇮', 'Algeria': '🇩🇿',
-    'Egypt': '🇪🇬', 'China': '🇨🇳', 'Iran': '🇮🇷',
-    'Saudi Arabia': '🇸🇦', 'Australia': '🇦🇺', 'United States': '🇺🇸',
-    'Canada': '🇨🇦', 'Jamaica': '🇯🇲', 'Mexico': '🇲🇽',
-    'Greece': '🇬🇷', 'Hungary': '🇭🇺', 'Russia': '🇷🇺',
-  }
-  return flags[nationality] || '🌍'
-}
+
 
 function ChampionsLeague() {
   const [standings, setStandings] = useState<StandingEntry[]>([])
@@ -296,7 +268,7 @@ function ChampionsLeague() {
                 {scorers.map((scorer, index) => (
                   <tr key={index}>
                     <td style={{ fontFamily: 'var(--font-score)', fontSize: '16px', color: 'var(--gold)' }}>{index + 1}</td>
-                    <td><strong>{getFlag(scorer.player.nationality)} {scorer.player.name}</strong></td>
+                    <td><strong><Flag nationality={scorer.player.nationality} />{scorer.player.name}</strong></td>
                     <td style={{ color: 'var(--ink-muted)' }}>{scorer.team.name}</td>
                     <td><strong style={{ color: 'var(--gold)' }}>{scorer.goals}</strong></td>
                     <td>{scorer.assists ?? 'N/A'}</td>
