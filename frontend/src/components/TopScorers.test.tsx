@@ -17,7 +17,8 @@ describe('TopScorers', () => {
     const haaland = (await screen.findByText(/Erling Haaland/)).closest('tr')!    // the whole table row for Haaland
     const cells = within(haaland).getAllByRole('cell')                            // its 5 cells: #, player, team, goals, assists
     expect(cells[0]).toHaveTextContent('1')
-    expect(cells[1]).toHaveTextContent('🇳🇴 Erling Haaland')                       // flag emoji (#46 will switch to an image)
+    expect(cells[1]).toHaveTextContent('Erling Haaland')
+    expect(within(cells[1]).getByRole('img', { name: 'Norway' })).toHaveAttribute('src', 'https://flagcdn.com/w20/no.png')   // a flag image, not an emoji (#46)
     expect(cells[2]).toHaveTextContent('Manchester City FC')
     expect(cells[3]).toHaveTextContent('8')
     expect(cells[4]).toHaveTextContent('N/A')                                      // assists are null → "N/A"
