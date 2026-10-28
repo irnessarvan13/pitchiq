@@ -9,54 +9,10 @@ import axios from 'axios'                // axios = Python httpx equivalent. Mak
 
 const API_BASE = '/api'                  // base URL for all API calls — Vite proxy forwards /api to http://localhost:8000
 
-// ─────────────────────────────────────────────
-// INTERFACES — define what the data looks like
-// TypeScript uses these to catch errors and provide autocomplete
-// ─────────────────────────────────────────────
+// the shapes of the data (Match, LiveMatch, StandingEntry, TopScorer) live in types.ts (#47)
+// "import type" = we only use these for type checking — they disappear when the app is built
+import type { Match, LiveMatch, StandingEntry, TopScorer } from '../types'
 
-// defines what a match from our local PostgreSQL database looks like
-interface Match {
-  id: number                             // unique id auto-assigned by PostgreSQL
-  home_team: string                      // home team name
-  away_team: string                      // away team name
-  home_score: number                     // current home score
-  away_score: number                     // current away score
-  status: string                         // scheduled | live | finished
-  created_at: string                     // when the match was created
-}
-
-// defines what a live match from football-data.org looks like
-interface LiveMatch {
-  id: number                             // match id from football-data.org
-  homeTeam: { name: string; crest: string }   // nested object — team name and crest image URL
-  awayTeam: { name: string; crest: string }   // nested object — team name and crest image URL
-  score: {
-    fullTime: { home: number | null; away: number | null }  // number | null — can be null before match starts
-  }
-  status: string                         // SCHEDULED | IN_PLAY | PAUSED | FINISHED
-  competition: { name: string }          // which competition this match belongs to
-  utcDate: string                        // match date and time in UTC
-}
-
-// defines what one row in the standings table looks like
-interface StandingEntry {
-  position: number                       // league position
-  team: { name: string; crest: string }  // team name and crest image URL
-  playedGames: number                    // total games played
-  won: number                            // total wins
-  draw: number                           // total draws
-  lost: number                           // total losses
-  points: number                         // total points
-  goalDifference: number                 // goals scored minus goals conceded
-}
-
-// defines what a top scorer entry looks like
-interface TopScorer {
-  player: { name: string; nationality: string }  // player name and nationality
-  team: { name: string }                         // team the player plays for
-  goals: number                                  // total goals scored
-  assists: number | null                         // assists — can be null if not tracked
-}
 
 // ─────────────────────────────────────────────
 // API FUNCTIONS

@@ -42,3 +42,4 @@ describe('Flag', () => {
     expect(flag).not.toBeVisible()                                               // hidden, instead of a broken-image icon
   })
 })
+

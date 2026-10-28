@@ -1,10 +1,5 @@
 /*
 ChampionsLeague.tsx — dedicated page for the UEFA Champions League.
-Shows live UCL matches, group standings, and top scorers.
-Uses React Router's Link for navigation back to the main dashboard.
-*/
-/*
-ChampionsLeague.tsx — dedicated page for the UEFA Champions League.
 Special dark blue and gold aesthetic — the crown jewel of club football.
 Shows live UCL matches, group standings, and top scorers.
 Uses React Router's Link for navigation back to the main dashboard.
@@ -15,6 +10,7 @@ import { Link } from 'react-router-dom'          // for navigation back to dashb
 import { getStandings, getTopScorers, getLiveMatches } from '../api/football'
 import SectionError from '../components/SectionError'   // the error message + Try again button (#42)
 import Flag from '../components/Flag'                   // the player's flag image (#46)
+import type { StandingEntry, TopScorer, LiveMatch } from '../types'   // shared data shapes, see types.ts (#47)
 
 // UCL competition code
 const UCL = 'CL'
@@ -25,45 +21,12 @@ const UCL = 'CL'
 type SectionStatus = 'loading' | 'error' | 'ready'
 
 
-// defines shape of one standings entry
-interface StandingEntry {
-  position: number
-  team: { name: string; crest: string }
-  playedGames: number
-  won: number
-  draw: number
-  lost: number
-  points: number
-  goalDifference: number
-}
-
-// defines shape of one scorer
-interface TopScorer {
-  player: { name: string; nationality: string }
-  team: { name: string }
-  goals: number
-  assists: number | null
-}
-
-// defines shape of one live match
-interface LiveMatch {
-  id: number
-  homeTeam: { name: string; crest: string }
-  awayTeam: { name: string; crest: string }
-  score: { fullTime: { home: number | null; away: number | null } }
-  status: string
-  competition: { name: string }
-  utcDate: string
-}
-
-
-
 function ChampionsLeague() {
   const [standings, setStandings] = useState<StandingEntry[]>([])
   const [scorers, setScorers] = useState<TopScorer[]>([])
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([])
   const [matchday, setMatchday] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)                                     // true until the first try of all 3 requests has finished
+  const [loading, setLoading] = useState(true)            // true until the first try of all 3 requests has finished
   const [standingsStatus, setStandingsStatus] = useState<SectionStatus>('loading')
   const [scorersStatus, setScorersStatus] = useState<SectionStatus>('loading')
   const [liveStatus, setLiveStatus] = useState<SectionStatus>('loading')
@@ -86,7 +49,6 @@ function ChampionsLeague() {
   function loadScorers() {
     return getTopScorers(UCL)
       .then(data => {
-        console.log('UCL Nationalities:', data.map((s: any) => s.player.nationality))  // temporary debug — remove after fixing
         setScorers(data)
         setScorersStatus('ready')
       })
