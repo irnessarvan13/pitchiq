@@ -32,6 +32,7 @@ describe('ChampionsLeague page', () => {
     expect(screen.getByRole('heading', { name: 'UEFA Champions League' })).toBeInTheDocument()
     expect(screen.getByText('League Stage Standings')).toBeInTheDocument()
     expect(screen.getByText(/Erling Haaland/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Norway' })).toHaveAttribute('src', 'https://flagcdn.com/w20/no.png')   // Haaland's flag image (#46)
     expect(screen.getByRole('link', { name: '← Back to Dashboard' })).toHaveAttribute('href', '/')
   })
 
