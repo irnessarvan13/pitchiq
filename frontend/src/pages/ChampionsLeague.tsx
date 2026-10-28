@@ -11,6 +11,7 @@ import { getStandings, getTopScorers, getLiveMatches } from '../api/football'
 import SectionError from '../components/SectionError'   // the error message + Try again button (#42)
 import Flag from '../components/Flag'                   // the player's flag image (#46)
 import type { StandingEntry, TopScorer, LiveMatch } from '../types'   // shared data shapes, see types.ts (#47)
+import { formatScore } from '../format'                 // "2 - 1", or "–" when there's no score yet (#29)
 
 // UCL competition code
 const UCL = 'CL'
@@ -153,7 +154,7 @@ function ChampionsLeague() {
                   <span>{match.homeTeam.name}</span>
                 </div>
                 <div className="ucl-score">
-                  {match.score.fullTime.home ?? 0} - {match.score.fullTime.away ?? 0}
+                  {formatScore(match.score.fullTime.home, match.score.fullTime.away)}
                 </div>
                 <div className="ucl-team ucl-team-away">
                   <span>{match.awayTeam.name}</span>

@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'          // useState = stores data |
 import { getLiveMatches } from '../api/football'      // import API function — ../ goes up to src then into api/football
 import SectionError from './SectionError'             // the error message + Try again button (#42)
 import type { LiveMatch } from '../types'             // the shape of one live match — shared, see types.ts (#47)
+import { formatScore } from '../format'               // "2 - 1", or "–" when there's no score yet (#29)
 
 
 function LiveMatches() {
@@ -66,12 +67,14 @@ function LiveMatches() {
       <h2>Live Matches <span className="live-badge">Live</span></h2>
       {matches.map(match => (
         <div key={match.id} className="match-card">
+          {/* which league this match is from (#29) */}
+          <p className="match-competition">{match.competition.name}</p>
           <div className="team-row">
             <img src={match.homeTeam.crest} alt={match.homeTeam.name} width={24} />
             <span>{match.homeTeam.name}</span>
           </div>
           <div className="score">
-            {match.score.fullTime.home ?? 0} - {match.score.fullTime.away ?? 0}
+            {formatScore(match.score.fullTime.home, match.score.fullTime.away)}
           </div>
           <div className="team-row away">
             <span>{match.awayTeam.name}</span>
