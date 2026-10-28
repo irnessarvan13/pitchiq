@@ -36,14 +36,32 @@ describe('LiveMatches', () => {
     expect(screen.getByText('1 - 3')).toBeInTheDocument()
   })
 
-  it('shows "0 - 0" when a match has no score yet (BUG recorded on purpose — #29 will change this)', async () => {
+  // #29: "no score yet" must not look like a real 0 - 0
+  it('shows "–" instead of a fake "0 - 0" when a match has no score yet', async () => {
     server.use(
       http.get('/api/football/live', () => HttpResponse.json({ matches: [liveMatch(1, 'Santos FC', 'EC Bahia', null, null)] }))
     )
 
     render(<LiveMatches />)
 
-    expect(await screen.findByText('0 - 0')).toBeInTheDocument()                  // "no score" shows as a fake 0 - 0
+    expect(await screen.findByText('–')).toBeInTheDocument()                      // a dash = "no score yet"
+    expect(screen.queryByText('0 - 0')).toBeNull()                                // never a made-up score
+  })
+
+  it('shows which competition each live match is from', async () => {
+    server.use(
+      http.get('/api/football/live', () => HttpResponse.json({
+        matches: [
+          liveMatch(1, 'Arsenal FC', 'Chelsea FC', 2, 1),                                          // Premier League (the default)
+          liveMatch(2, 'Santos FC', 'EC Bahia', 1, 1, 'Campeonato Brasileiro Série A'),            // a Brazilian league match
+        ],
+      }))
+    )
+
+    render(<LiveMatches />)
+
+    expect(await screen.findByText('Premier League')).toBeInTheDocument()
+    expect(screen.getByText('Campeonato Brasileiro Série A')).toBeInTheDocument()   // so it's clear this one isn't Premier League
   })
 
   // #42: a failed request must look different from "nothing live" — checked for each error the backend can send

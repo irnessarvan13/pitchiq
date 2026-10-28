@@ -11,6 +11,7 @@ Tests replay these with a fake API (respx) so they never call the real API, neve
 | `matches_PL_200.json` | `/competitions/PL/matches` | 200 | Trimmed to the first 5 matches (`resultSet.count` set to 5) |
 | `scorers_PL_200.json` | `/competitions/PL/scorers` | 200 | |
 | `live_empty_200.json` | `/matches?status=LIVE` | 200 | No live matches at the time: `"count": 0`, `"matches": []` |
+| `live_stale_200.json` | `/matches?status=LIVE` | 200 | **Rebuilt by hand for #29** from the Oct 24, 2026 production check (the real response can't be re-recorded). Santos FC vs EC Bahia: `IN_PLAY` almost 3 hours after kickoff, `lastUpdated` **before** kickoff, score `null`. The status, times and score are the real values; the ids and crests are placeholders. |
 | `match_560542_200.json` | `/matches/560542` | 200 | |
 | `team_57_200.json` | `/teams/57` | 200 | Arsenal |
 | `matches_EL_403.json` (+ headers) | `/competitions/EL/matches` | 403 | Competition not on the free plan |

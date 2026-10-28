@@ -20,6 +20,7 @@ from redis.backoff import NoBackoff       # "wait 0 seconds between retries"
 from redis.retry import Retry             # controls how many times redis-py retries a failed command
 import json        #json to serialize Python dictionaries to strings for Redis storage and deserialize them back when reading from cache
 import logging     # writes warnings to the server logs — so we know when something goes wrong
+from datetime import datetime, timedelta, timezone   # dates and times — used to spot stale "live" matches (#29)
 from typing import Literal, get_args      # Literal = "only these exact values are allowed"
 
 
@@ -185,6 +186,32 @@ async def get_topscorers(cache, competition="PL"):
 
 # get_livematches() — returns all matches currently live across ALL competitions
 # uses params to pass ?status=LIVE as a query filter — cleaner than putting it in the URL
+# ─────────────────────────────────────────────
+# STALE LIVE MATCHES (#29)
+# football-data.org's free plan sometimes stops updating a match, so it stays "IN_PLAY" for hours
+# with no score. Don't trust that blindly ("defensive programming") — hide matches that can't really be live.
+# ─────────────────────────────────────────────
+
+LIVE_MATCH_MAX_AGE = timedelta(hours=3)   # 90 min + half-time + stoppage + extra time + penalties fits well inside 3 hours
+
+
+# utc_now() — the current time in UTC. It's its own function so tests can replace it with a fixed time.
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+# is_stale() — True if a "live" match can't really be live anymore
+# football-data.org times look like "2026-10-25T01:00:00Z" (the Z means UTC); datetime.fromisoformat() reads them
+def is_stale(match, now):
+    kickoff = datetime.fromisoformat(match["utcDate"])
+    if now - kickoff > LIVE_MATCH_MAX_AGE:
+        return True                                       # kicked off more than 3 hours ago — it can't still be going
+    last_updated = match.get("lastUpdated")
+    if last_updated and datetime.fromisoformat(last_updated) < kickoff:
+        return True                                       # never updated since before kickoff — its "live" status can't be trusted
+    return False
+
+
 async def get_livematches(cache):
     cache_key = "live:matches"                            # one key — live matches aren't per competition
 
@@ -193,6 +220,9 @@ async def get_livematches(cache):
         return cached_data                                # cache hit — return immediately, no API call
 
     data = await fetch_from_api(f"{BASE_URL}/matches", params={"status": "LIVE"})
+    if "matches" in data:                                 # remove stale matches BEFORE caching, so only fresh ones are saved (#29)
+        now = utc_now()
+        data["matches"] = [match for match in data["matches"] if not is_stale(match, now)]
     set_cached(cache, cache_key, data, ttl=30)            # live data goes stale fast — only cache 30 seconds
     return data
 

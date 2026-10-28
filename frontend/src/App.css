@@ -193,10 +193,19 @@
 /* match card for live matches */
 .match-card {
   display: flex;
+  flex-wrap: wrap;                 /* lets the league name (#29) take its own line above the teams and score */
   align-items: center;
   justify-content: space-between;
   padding: 14px 0;
   border-bottom: 1px solid var(--line);
+}
+
+/* the league name above each live match (#29) — full width, so the teams and score wrap onto the next line */
+.match-competition {
+  width: 100%;
+  margin: 0 0 6px;
+  color: var(--ink-muted);
+  font-size: 12px;
 }
 
 .match-card:last-child {
